@@ -1,0 +1,1172 @@
+{
+  "class_imbalance": {
+    "all_gold": {
+      "ACCOUNT_ACCESS": 31,
+      "ACCOUNT_SECURITY": 30,
+      "APP_TECHNICAL": 31,
+      "BILLING_PAYMENT": 34,
+      "CONTENT": 33,
+      "FEATURE": 54,
+      "NON_SUPPORT": 7,
+      "OTHER_SUPPORT": 3,
+      "SUBSCRIPTION": 33,
+      "UNKNOWN": 14
+    },
+    "primary_eligible": {
+      "ACCOUNT_ACCESS": 30,
+      "ACCOUNT_SECURITY": 30,
+      "APP_TECHNICAL": 25,
+      "BILLING_PAYMENT": 34,
+      "CONTENT": 31,
+      "FEATURE": 48,
+      "SUBSCRIPTION": 28
+    }
+  },
+  "development_samples": 191,
+  "diagnostics": {
+    "counts_by_partition": {
+      "quarantine": {
+        "all_rows": 3,
+        "language_issue": 0,
+        "needs_context": 1,
+        "outside_core_labels": 0,
+        "primary_eligible": 0
+      },
+      "test": {
+        "all_rows": 40,
+        "language_issue": 1,
+        "needs_context": 3,
+        "outside_core_labels": 3,
+        "primary_eligible": 35
+      },
+      "train": {
+        "all_rows": 187,
+        "language_issue": 3,
+        "needs_context": 16,
+        "outside_core_labels": 18,
+        "primary_eligible": 157
+      },
+      "validation": {
+        "all_rows": 40,
+        "language_issue": 0,
+        "needs_context": 5,
+        "outside_core_labels": 3,
+        "primary_eligible": 34
+      }
+    },
+    "heldout_flagged_core": {
+      "accuracy": 0.0,
+      "confusion_matrix": {
+        "labels": [
+          "ACCOUNT_ACCESS",
+          "ACCOUNT_SECURITY",
+          "BILLING_PAYMENT",
+          "SUBSCRIPTION",
+          "APP_TECHNICAL",
+          "CONTENT",
+          "FEATURE"
+        ],
+        "rows_true_columns_predicted": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "limitation": "Small, selected annotation set; all scores are preliminary, not production accuracy estimates.",
+      "macro_f1": 0.0,
+      "macro_precision": 0.0,
+      "macro_recall": 0.0,
+      "per_class": {
+        "ACCOUNT_ACCESS": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 0
+        },
+        "ACCOUNT_SECURITY": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 0
+        },
+        "APP_TECHNICAL": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 1
+        },
+        "BILLING_PAYMENT": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 0
+        },
+        "CONTENT": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 0
+        },
+        "FEATURE": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 0
+        },
+        "SUBSCRIPTION": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 1
+        }
+      },
+      "preliminary": true,
+      "samples": 2,
+      "weighted_f1": 0.0
+    },
+    "heldout_outside_core": {
+      "accuracy": null,
+      "forced_core_prediction_counts": {
+        "ACCOUNT_ACCESS": 0,
+        "ACCOUNT_SECURITY": 0,
+        "APP_TECHNICAL": 1,
+        "BILLING_PAYMENT": 0,
+        "CONTENT": 0,
+        "FEATURE": 1,
+        "SUBSCRIPTION": 1
+      },
+      "reason": "Unsupported labels are never recognized by this seven-class classifier.",
+      "samples": 3
+    },
+    "policy": "Only test-group diagnostic scores are reported; no metrics on quarantine or training-related diagnostic examples."
+  },
+  "exclusion_counts_by_class": {
+    "ACCOUNT_ACCESS": {
+      "DAMAGED_UNRESOLVED": 0,
+      "INCOMPLETE_ANCESTRY_COMPONENT": 0,
+      "LANGUAGE_ISSUE": 0,
+      "NEEDS_CONTEXT": 1,
+      "OUTSIDE_CORE_LABELS": 0
+    },
+    "ACCOUNT_SECURITY": {
+      "DAMAGED_UNRESOLVED": 0,
+      "INCOMPLETE_ANCESTRY_COMPONENT": 0,
+      "LANGUAGE_ISSUE": 0,
+      "NEEDS_CONTEXT": 0,
+      "OUTSIDE_CORE_LABELS": 0
+    },
+    "APP_TECHNICAL": {
+      "DAMAGED_UNRESOLVED": 0,
+      "INCOMPLETE_ANCESTRY_COMPONENT": 1,
+      "LANGUAGE_ISSUE": 0,
+      "NEEDS_CONTEXT": 6,
+      "OUTSIDE_CORE_LABELS": 0
+    },
+    "BILLING_PAYMENT": {
+      "DAMAGED_UNRESOLVED": 0,
+      "INCOMPLETE_ANCESTRY_COMPONENT": 0,
+      "LANGUAGE_ISSUE": 0,
+      "NEEDS_CONTEXT": 0,
+      "OUTSIDE_CORE_LABELS": 0
+    },
+    "CONTENT": {
+      "DAMAGED_UNRESOLVED": 0,
+      "INCOMPLETE_ANCESTRY_COMPONENT": 1,
+      "LANGUAGE_ISSUE": 0,
+      "NEEDS_CONTEXT": 1,
+      "OUTSIDE_CORE_LABELS": 0
+    },
+    "FEATURE": {
+      "DAMAGED_UNRESOLVED": 0,
+      "INCOMPLETE_ANCESTRY_COMPONENT": 1,
+      "LANGUAGE_ISSUE": 1,
+      "NEEDS_CONTEXT": 4,
+      "OUTSIDE_CORE_LABELS": 0
+    },
+    "NON_SUPPORT": {
+      "DAMAGED_UNRESOLVED": 0,
+      "INCOMPLETE_ANCESTRY_COMPONENT": 0,
+      "LANGUAGE_ISSUE": 0,
+      "NEEDS_CONTEXT": 0,
+      "OUTSIDE_CORE_LABELS": 7
+    },
+    "OTHER_SUPPORT": {
+      "DAMAGED_UNRESOLVED": 0,
+      "INCOMPLETE_ANCESTRY_COMPONENT": 0,
+      "LANGUAGE_ISSUE": 0,
+      "NEEDS_CONTEXT": 1,
+      "OUTSIDE_CORE_LABELS": 3
+    },
+    "SUBSCRIPTION": {
+      "DAMAGED_UNRESOLVED": 0,
+      "INCOMPLETE_ANCESTRY_COMPONENT": 0,
+      "LANGUAGE_ISSUE": 1,
+      "NEEDS_CONTEXT": 5,
+      "OUTSIDE_CORE_LABELS": 0
+    },
+    "UNKNOWN": {
+      "DAMAGED_UNRESOLVED": 0,
+      "INCOMPLETE_ANCESTRY_COMPONENT": 0,
+      "LANGUAGE_ISSUE": 2,
+      "NEEDS_CONTEXT": 7,
+      "OUTSIDE_CORE_LABELS": 14
+    }
+  },
+  "human_review_required": true,
+  "model_version": "m1_tfidf_lr_v1",
+  "preliminary": true,
+  "privacy": "Aggregate metrics only. No customer text or record identifiers.",
+  "procedure": "Fit two fixed C candidates (1 and 4) on primary train only; select validation macro-F1, ties prefer C=1. Refit selected pipeline and majority baseline on primary train+validation, then evaluate primary test once. No test-driven tuning; established runs are returned without reevaluation.",
+  "run_fingerprint": "18ef7607718e793f958b60e27f3abccaf2dba38460b3f71c28579c5e6aac0113",
+  "schema_version": 1,
+  "selected_C": 1.0,
+  "selection": [
+    {
+      "C": 1.0,
+      "validation_macro_f1": 0.6126984126984126,
+      "validation_metrics": {
+        "accuracy": 0.5882352941176471,
+        "confusion_matrix": {
+          "labels": [
+            "ACCOUNT_ACCESS",
+            "ACCOUNT_SECURITY",
+            "BILLING_PAYMENT",
+            "SUBSCRIPTION",
+            "APP_TECHNICAL",
+            "CONTENT",
+            "FEATURE"
+          ],
+          "rows_true_columns_predicted": [
+            [
+              4,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              4,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              2,
+              2,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              0,
+              3,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              0,
+              2,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              2,
+              3
+            ],
+            [
+              0,
+              0,
+              0,
+              1,
+              2,
+              2,
+              3
+            ]
+          ]
+        },
+        "limitation": "Small, selected annotation set; all scores are preliminary, not production accuracy estimates.",
+        "macro_f1": 0.6126984126984126,
+        "macro_precision": 0.627891156462585,
+        "macro_recall": 0.6273809523809524,
+        "per_class": {
+          "ACCOUNT_ACCESS": {
+            "f1-score": 0.8888888888888888,
+            "precision": 1.0,
+            "recall": 0.8,
+            "support": 5
+          },
+          "ACCOUNT_SECURITY": {
+            "f1-score": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 4
+          },
+          "APP_TECHNICAL": {
+            "f1-score": 0.5,
+            "precision": 0.4,
+            "recall": 0.6666666666666666,
+            "support": 3
+          },
+          "BILLING_PAYMENT": {
+            "f1-score": 0.5,
+            "precision": 0.6666666666666666,
+            "recall": 0.4,
+            "support": 5
+          },
+          "CONTENT": {
+            "f1-score": 0.4,
+            "precision": 0.4,
+            "recall": 0.4,
+            "support": 5
+          },
+          "FEATURE": {
+            "f1-score": 0.4,
+            "precision": 0.42857142857142855,
+            "recall": 0.375,
+            "support": 8
+          },
+          "SUBSCRIPTION": {
+            "f1-score": 0.6,
+            "precision": 0.5,
+            "recall": 0.75,
+            "support": 4
+          }
+        },
+        "preliminary": true,
+        "samples": 34,
+        "weighted_f1": 0.5895424836601307
+      }
+    },
+    {
+      "C": 4.0,
+      "validation_macro_f1": 0.6013538748832866,
+      "validation_metrics": {
+        "accuracy": 0.5882352941176471,
+        "confusion_matrix": {
+          "labels": [
+            "ACCOUNT_ACCESS",
+            "ACCOUNT_SECURITY",
+            "BILLING_PAYMENT",
+            "SUBSCRIPTION",
+            "APP_TECHNICAL",
+            "CONTENT",
+            "FEATURE"
+          ],
+          "rows_true_columns_predicted": [
+            [
+              4,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              4,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              2,
+              2,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              0,
+              3,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              0,
+              2,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              4
+            ],
+            [
+              0,
+              0,
+              0,
+              1,
+              2,
+              1,
+              4
+            ]
+          ]
+        },
+        "limitation": "Small, selected annotation set; all scores are preliminary, not production accuracy estimates.",
+        "macro_f1": 0.6013538748832866,
+        "macro_precision": 0.6206349206349205,
+        "macro_recall": 0.6166666666666666,
+        "per_class": {
+          "ACCOUNT_ACCESS": {
+            "f1-score": 0.8888888888888888,
+            "precision": 1.0,
+            "recall": 0.8,
+            "support": 5
+          },
+          "ACCOUNT_SECURITY": {
+            "f1-score": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 4
+          },
+          "APP_TECHNICAL": {
+            "f1-score": 0.5,
+            "precision": 0.4,
+            "recall": 0.6666666666666666,
+            "support": 3
+          },
+          "BILLING_PAYMENT": {
+            "f1-score": 0.5,
+            "precision": 0.6666666666666666,
+            "recall": 0.4,
+            "support": 5
+          },
+          "CONTENT": {
+            "f1-score": 0.25,
+            "precision": 0.3333333333333333,
+            "recall": 0.2,
+            "support": 5
+          },
+          "FEATURE": {
+            "f1-score": 0.47058823529411764,
+            "precision": 0.4444444444444444,
+            "recall": 0.5,
+            "support": 8
+          },
+          "SUBSCRIPTION": {
+            "f1-score": 0.6,
+            "precision": 0.5,
+            "recall": 0.75,
+            "support": 4
+          }
+        },
+        "preliminary": true,
+        "samples": 34,
+        "weighted_f1": 0.5840926566705114
+      }
+    }
+  ],
+  "split_summary": {
+    "algorithm": "deterministic_group_search_v1",
+    "diagnostic_policy": "All records share group assignments. Only test-group diagnostics are held out from final development fitting; train-group diagnostics are not independent.",
+    "groups": {
+      "quarantine": 3,
+      "test": 40,
+      "train": 186,
+      "validation": 40
+    },
+    "leakage_checks": {
+      "component_overlap": 0,
+      "incomplete_ancestry_in_primary": 0,
+      "normalized_input_overlap": 0
+    },
+    "membership_sha256": "6e54df81d552341a64e2df71c7d8ab4ed23f92bc0cbdae36bbc55439c1114876",
+    "minimum_primary_support": {
+      "test": 3,
+      "train": 10,
+      "validation": 3
+    },
+    "preliminary": true,
+    "primary_counts": {
+      "test": {
+        "ACCOUNT_ACCESS": 3,
+        "ACCOUNT_SECURITY": 5,
+        "APP_TECHNICAL": 4,
+        "BILLING_PAYMENT": 5,
+        "CONTENT": 5,
+        "FEATURE": 9,
+        "SUBSCRIPTION": 4
+      },
+      "train": {
+        "ACCOUNT_ACCESS": 22,
+        "ACCOUNT_SECURITY": 21,
+        "APP_TECHNICAL": 18,
+        "BILLING_PAYMENT": 24,
+        "CONTENT": 21,
+        "FEATURE": 31,
+        "SUBSCRIPTION": 20
+      },
+      "validation": {
+        "ACCOUNT_ACCESS": 5,
+        "ACCOUNT_SECURITY": 4,
+        "APP_TECHNICAL": 3,
+        "BILLING_PAYMENT": 5,
+        "CONTENT": 5,
+        "FEATURE": 8,
+        "SUBSCRIPTION": 4
+      }
+    },
+    "rows": {
+      "quarantine": 3,
+      "test": 40,
+      "train": 187,
+      "validation": 40
+    },
+    "search_candidates": 4096,
+    "seed": 42,
+    "selection_uses": "Label counts/group sizes only, never model scores or text features.",
+    "source_metadata": {
+      "data_version": "m1_v1",
+      "gold_sha256": "81d3ed3eb4a83ccc39cf25148a3e7a791038ad78eff0b0c9fd2b591874c9cc8a",
+      "grouping_version": "ancestry_normalized_initial_components_v1",
+      "near_duplicate_threshold": 0.92,
+      "primary_flag_policy": "Both annotation flags false; complete ancestry components; seven core labels only.",
+      "raw_sha256": "cd297fcfa1bf6f99938be242e8e578980bc6d1b96adc8691abec9a39175b03c0",
+      "threads_sha256": "ce60ef8951cf86626d172d2012cb794d39fc180b75a2fb5e15e3b4fd5a9c5e08"
+    },
+    "target_proportions": {
+      "test": 0.15,
+      "train": 0.7,
+      "validation": 0.15
+    },
+    "version": "m1_split_v1"
+  },
+  "test": {
+    "majority": {
+      "accuracy": 0.2571428571428571,
+      "confusion_matrix": {
+        "labels": [
+          "ACCOUNT_ACCESS",
+          "ACCOUNT_SECURITY",
+          "BILLING_PAYMENT",
+          "SUBSCRIPTION",
+          "APP_TECHNICAL",
+          "CONTENT",
+          "FEATURE"
+        ],
+        "rows_true_columns_predicted": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            9
+          ]
+        ]
+      },
+      "limitation": "Small, selected annotation set; all scores are preliminary, not production accuracy estimates.",
+      "macro_f1": 0.05844155844155845,
+      "macro_precision": 0.03673469387755102,
+      "macro_recall": 0.14285714285714285,
+      "per_class": {
+        "ACCOUNT_ACCESS": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3
+        },
+        "ACCOUNT_SECURITY": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 5
+        },
+        "APP_TECHNICAL": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 4
+        },
+        "BILLING_PAYMENT": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 5
+        },
+        "CONTENT": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 5
+        },
+        "FEATURE": {
+          "f1-score": 0.4090909090909091,
+          "precision": 0.2571428571428571,
+          "recall": 1.0,
+          "support": 9
+        },
+        "SUBSCRIPTION": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 4
+        }
+      },
+      "preliminary": true,
+      "samples": 35,
+      "weighted_f1": 0.1051948051948052
+    },
+    "tfidf_logistic_regression": {
+      "accuracy": 0.6571428571428571,
+      "confusion_matrix": {
+        "labels": [
+          "ACCOUNT_ACCESS",
+          "ACCOUNT_SECURITY",
+          "BILLING_PAYMENT",
+          "SUBSCRIPTION",
+          "APP_TECHNICAL",
+          "CONTENT",
+          "FEATURE"
+        ],
+        "rows_true_columns_predicted": [
+          [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            3,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            2,
+            1,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            4,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            0
+          ],
+          [
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            6
+          ]
+        ]
+      },
+      "limitation": "Small, selected annotation set; all scores are preliminary, not production accuracy estimates.",
+      "macro_f1": 0.6226518677646498,
+      "macro_precision": 0.6428571428571429,
+      "macro_recall": 0.6666666666666667,
+      "per_class": {
+        "ACCOUNT_ACCESS": {
+          "f1-score": 0.6666666666666666,
+          "precision": 0.5,
+          "recall": 1.0,
+          "support": 3
+        },
+        "ACCOUNT_SECURITY": {
+          "f1-score": 0.6,
+          "precision": 0.6,
+          "recall": 0.6,
+          "support": 5
+        },
+        "APP_TECHNICAL": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 4
+        },
+        "BILLING_PAYMENT": {
+          "f1-score": 0.5714285714285714,
+          "precision": 1.0,
+          "recall": 0.4,
+          "support": 5
+        },
+        "CONTENT": {
+          "f1-score": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 5
+        },
+        "FEATURE": {
+          "f1-score": 0.631578947368421,
+          "precision": 0.6,
+          "recall": 0.6666666666666666,
+          "support": 9
+        },
+        "SUBSCRIPTION": {
+          "f1-score": 0.8888888888888888,
+          "precision": 0.8,
+          "recall": 1.0,
+          "support": 4
+        }
+      },
+      "preliminary": true,
+      "samples": 35,
+      "weighted_f1": 0.6313402554004057
+    }
+  },
+  "test_error_analysis": {
+    "errors": 12,
+    "length_buckets": {
+      "10_to_29_words": {
+        "errors": 6,
+        "samples": 22
+      },
+      "30plus_words": {
+        "errors": 5,
+        "samples": 8
+      },
+      "under_10_words": {
+        "errors": 1,
+        "samples": 5
+      }
+    },
+    "mean_raw_probability_when_correct": 0.2187691453015781,
+    "mean_raw_probability_when_wrong": 0.20365632651780477,
+    "privacy": "No messages, record IDs, tokens, vocabulary or example excerpts are exported."
+  },
+  "validation": {
+    "majority": {
+      "accuracy": 0.23529411764705882,
+      "confusion_matrix": {
+        "labels": [
+          "ACCOUNT_ACCESS",
+          "ACCOUNT_SECURITY",
+          "BILLING_PAYMENT",
+          "SUBSCRIPTION",
+          "APP_TECHNICAL",
+          "CONTENT",
+          "FEATURE"
+        ],
+        "rows_true_columns_predicted": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8
+          ]
+        ]
+      },
+      "limitation": "Small, selected annotation set; all scores are preliminary, not production accuracy estimates.",
+      "macro_f1": 0.05442176870748299,
+      "macro_precision": 0.03361344537815126,
+      "macro_recall": 0.14285714285714285,
+      "per_class": {
+        "ACCOUNT_ACCESS": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 5
+        },
+        "ACCOUNT_SECURITY": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 4
+        },
+        "APP_TECHNICAL": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3
+        },
+        "BILLING_PAYMENT": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 5
+        },
+        "CONTENT": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 5
+        },
+        "FEATURE": {
+          "f1-score": 0.38095238095238093,
+          "precision": 0.23529411764705882,
+          "recall": 1.0,
+          "support": 8
+        },
+        "SUBSCRIPTION": {
+          "f1-score": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 4
+        }
+      },
+      "preliminary": true,
+      "samples": 34,
+      "weighted_f1": 0.0896358543417367
+    },
+    "tfidf_logistic_regression": {
+      "accuracy": 0.5882352941176471,
+      "confusion_matrix": {
+        "labels": [
+          "ACCOUNT_ACCESS",
+          "ACCOUNT_SECURITY",
+          "BILLING_PAYMENT",
+          "SUBSCRIPTION",
+          "APP_TECHNICAL",
+          "CONTENT",
+          "FEATURE"
+        ],
+        "rows_true_columns_predicted": [
+          [
+            4,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            2,
+            2,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            3,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0,
+            2,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            1,
+            2,
+            2,
+            3
+          ]
+        ]
+      },
+      "limitation": "Small, selected annotation set; all scores are preliminary, not production accuracy estimates.",
+      "macro_f1": 0.6126984126984126,
+      "macro_precision": 0.627891156462585,
+      "macro_recall": 0.6273809523809524,
+      "per_class": {
+        "ACCOUNT_ACCESS": {
+          "f1-score": 0.8888888888888888,
+          "precision": 1.0,
+          "recall": 0.8,
+          "support": 5
+        },
+        "ACCOUNT_SECURITY": {
+          "f1-score": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 4
+        },
+        "APP_TECHNICAL": {
+          "f1-score": 0.5,
+          "precision": 0.4,
+          "recall": 0.6666666666666666,
+          "support": 3
+        },
+        "BILLING_PAYMENT": {
+          "f1-score": 0.5,
+          "precision": 0.6666666666666666,
+          "recall": 0.4,
+          "support": 5
+        },
+        "CONTENT": {
+          "f1-score": 0.4,
+          "precision": 0.4,
+          "recall": 0.4,
+          "support": 5
+        },
+        "FEATURE": {
+          "f1-score": 0.4,
+          "precision": 0.42857142857142855,
+          "recall": 0.375,
+          "support": 8
+        },
+        "SUBSCRIPTION": {
+          "f1-score": 0.6,
+          "precision": 0.5,
+          "recall": 0.75,
+          "support": 4
+        }
+      },
+      "preliminary": true,
+      "samples": 34,
+      "weighted_f1": 0.5895424836601307
+    }
+  }
+}

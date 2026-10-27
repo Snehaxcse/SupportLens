@@ -1,0 +1,64 @@
+# Private source data, annotations, derived identifiers and model binaries
+/data/raw/
+/data/processed/
+/data/derived/
+/data/splits/
+/artifacts/
+# Evaluation files must be reviewed aggregates before explicitly staging.
+/evaluation/private/
+
+# Environments, Python packaging and caches
+.venv/
+.venv-*/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+build/
+dist/
+
+# Environment variants and credential material (allow a synthetic example)
+.env
+.env.*
+!.env.example
+**/credentials*
+**/*secret*
+**/*token*.json
+**/service-account*.json
+**/service_account*.json
+.aws/
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Logs, coverage, local databases and scratch files
+*.log
+.coverage*
+coverage/
+htmlcov/
+*.sqlite*
+*.db
+*.db-*
+*.tmp
+*.temp
+*.bak
+*.joblib
+*.pkl
+*.pickle
+tmp/
+temp/
+
+# JavaScript build outputs and OS/editor state
+node_modules/
+.next/
+out/
+.DS_Store
+Thumbs.db
+.idea/

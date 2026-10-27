@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools==80.9.0", "wheel==0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "supportlens"
+version = "0.1.0"
+description = "Local, leakage-aware SupportLens intent classification baseline"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "pandas==2.3.3",
+  "scikit-learn==1.7.2",
+  "joblib==1.5.2",
+  "numpy==2.2.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.4.2"]
+
+[project.scripts]
+supportlens-ml = "supportlens.ml.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/ml"]
+addopts = "--strict-markers"
