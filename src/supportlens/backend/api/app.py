@@ -17,6 +17,8 @@ from ..auth.dependencies import current_user, verified_identity
 from ..auth.firebase import FirebaseVerifier
 from ..auth.users import UserService
 from ..domain.enums import UserRole
+from ..tickets.routes import install_ticket_routes
+from ..tickets.service import TicketService
 from .config import load_api_settings
 from .database import Database
 from .errors import APIError
@@ -66,6 +68,8 @@ def create_app(settings=None, *, runtime=None):
     if runtime is None:
         database = Database(settings)
         runtime = SimpleNamespace(database=database, verifier=FirebaseVerifier(settings), users=UserService(database))
+    if not hasattr(runtime, "tickets"):
+        runtime.tickets = TicketService(runtime.database)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -80,7 +84,7 @@ def create_app(settings=None, *, runtime=None):
                   openapi_url=None, lifespan=lifespan)
     app.state.runtime = runtime
     app.add_middleware(JSONCORSMiddleware, allow_origins=list(settings.cors_allowed_origins),
-        allow_credentials=False, allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type"],
+        allow_credentials=False, allow_methods=["GET", "POST", "PATCH"], allow_headers=["Authorization", "Content-Type"],
         expose_headers=["X-Request-ID"], max_age=600)
 
     @app.middleware("http")
@@ -137,4 +141,5 @@ def create_app(settings=None, *, runtime=None):
     def onboard(payload: OnboardingRequest, identity=Depends(verified_identity)):
         return UserResponse.model_validate(runtime.users.onboard(identity))
 
+    install_ticket_routes(app)
     return app
