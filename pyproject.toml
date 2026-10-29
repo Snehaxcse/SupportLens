@@ -16,13 +16,22 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest==8.4.2"]
+backend = [
+  "SQLAlchemy==2.0.44",
+  "alembic==1.16.5",
+  "psycopg[binary]==3.2.12",
+  "pydantic==2.11.9",
+  "pydantic-settings==2.10.1",
+]
 
 [project.scripts]
 supportlens-ml = "supportlens.ml.cli:main"
+supportlens-db = "supportlens.backend.db.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests/ml"]
+testpaths = ["tests/ml", "tests/backend"]
 addopts = "--strict-markers"
+markers = ["db_integration: opt-in transactions against a preflight-verified dedicated test database"]

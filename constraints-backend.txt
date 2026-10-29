@@ -1,0 +1,15 @@
+# M2-A backend constraints. Keep frozen M1 constraints.txt unchanged.
+SQLAlchemy==2.0.44
+alembic==1.16.5
+psycopg==3.2.12
+psycopg-binary==3.2.12
+pydantic==2.11.9
+pydantic-core==2.33.2
+pydantic-settings==2.10.1
+python-dotenv==1.1.1
+greenlet==3.2.4
+Mako==1.3.10
+MarkupSafe==3.0.3
+typing_extensions==4.15.0
+annotated-types==0.7.0
+typing-inspection==0.4.2
