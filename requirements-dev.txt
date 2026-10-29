@@ -1,3 +1,4 @@
 -c constraints.txt
 -c constraints-backend.txt
+-c constraints-auth.txt
 -e .[dev,backend]
