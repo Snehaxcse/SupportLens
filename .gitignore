@@ -62,3 +62,10 @@ out/
 .DS_Store
 Thumbs.db
 .idea/
+
+# Frontend verification output (synthetic screenshots are reviewed separately)
+*.tsbuildinfo
+playwright-report/
+test-results/
+frontend/next-env.d.ts
+.next-e2e/

@@ -1,0 +1,407 @@
+.agent-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.stat-link:hover {
+  border-color: #98b58c;
+  box-shadow: 0 3px 14px #183d2510;
+}
+.agent-list .ticket-list-head,
+.agent-list .ticket-row {
+  grid-template-columns: minmax(150px, 1.7fr) 100px 105px 115px minmax(
+      115px,
+      1fr
+    );
+}
+.assignment-cell {
+  font-size: 11px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.inbox-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr 1.2fr;
+  gap: 17px;
+  align-items: end;
+  padding: 23px;
+  margin-bottom: 24px;
+}
+.filter-search {
+  grid-column: 1/-1;
+}
+.search-input {
+  position: relative;
+}
+.search-input > svg {
+  position: absolute;
+  left: 13px;
+  top: 14px;
+  color: var(--muted);
+}
+.search-input > input {
+  padding-left: 39px;
+}
+.filter-actions {
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 19px;
+  margin-top: 3px;
+}
+.queue-order {
+  font-size: 11px;
+  color: var(--muted);
+}
+.workspace-ticket-summary {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+.workspace-ticket-summary > span {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: auto;
+}
+.workspace-ticket-summary .text-link {
+  font-size: 11px;
+}
+.agent-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 285px;
+  gap: 23px;
+  align-items: start;
+}
+.ticket-controls {
+  padding: 23px;
+}
+.ticket-controls > h2 {
+  font-size: 16px;
+  margin-bottom: 21px;
+}
+.control-section {
+  border-top: 1px solid var(--line);
+  padding-top: 21px;
+  margin-top: 21px;
+}
+.control-section:first-of-type {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+.control-section h3 {
+  font-size: 12px;
+  letter-spacing: 0;
+  font-weight: 650;
+  margin-bottom: 13px;
+}
+.control-section .button {
+  width: 100%;
+  font-size: 12px;
+}
+.control-section > .button {
+  margin-bottom: 15px;
+}
+.control-section > .field {
+  margin-bottom: 13px;
+}
+.control-section > .field > label {
+  margin-bottom: 2px;
+}
+.control-section .field-help {
+  margin-top: 13px;
+}
+.control-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 13px;
+}
+.control-heading h3 {
+  margin: 0;
+}
+.status-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.activity-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--muted);
+}
+.activity-heading h2 {
+  color: var(--ink);
+}
+.workspace .badge {
+  font-size: 11px;
+}
+.workspace .ticket-list-head {
+  font-size: 10px;
+}
+.workspace .ticket-id {
+  font-size: 10px;
+}
+.workspace .ticket-subject {
+  font-size: 13px;
+}
+.workspace .ticket-time {
+  font-size: 11px;
+}
+.workspace .plain-text {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.workspace .original-request h3 {
+  font-size: 13px;
+}
+.workspace .original-request time {
+  font-size: 11px;
+}
+.workspace .message-heading strong {
+  font-size: 13px;
+}
+.workspace .message-kind {
+  font-size: 11px;
+}
+.workspace .message-heading time {
+  font-size: 10px;
+}
+.workspace .internal-label {
+  font-size: 11px;
+}
+.workspace .composer-tabs button {
+  font-size: 12px;
+}
+.workspace .composer-mode-description {
+  font-size: 11px;
+}
+.workspace .composer textarea {
+  font-size: 13px;
+}
+.workspace .activity-list strong {
+  font-size: 12px;
+}
+.workspace .activity-list span {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.workspace .activity-list time {
+  font-size: 10px;
+}
+.workspace .pagination {
+  font-size: 11px;
+}
+.workspace .pagination-link {
+  font-size: 11px;
+}
+.workspace .stat-card > div {
+  font-size: 12px;
+}
+.workspace .stat-card > p {
+  font-size: 11px;
+}
+.workspace .ticket-info dt {
+  font-size: 11px;
+}
+.workspace .ticket-info dd {
+  font-size: 12px;
+}
+@media (max-width: 1250px) {
+  .agent-list .ticket-list-head,
+  .agent-list .ticket-row {
+    grid-template-columns: minmax(140px, 1fr) 95px 100px 95px 100px;
+    gap: 10px;
+    padding-left: 19px;
+    padding-right: 19px;
+  }
+  .agent-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .agent-detail-layout {
+    grid-template-columns: minmax(0, 1fr) 250px;
+    gap: 18px;
+  }
+  .ticket-controls {
+    padding: 19px;
+  }
+}
+@media (max-width: 1100px) {
+  .agent-detail-layout {
+    grid-template-columns: 1fr;
+  }
+  .agent-detail-layout > .ticket-info-rail {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .ticket-controls {
+    grid-row: span 2;
+  }
+  .agent-list .ticket-list-head {
+    display: none;
+  }
+  .agent-list .ticket-row {
+    grid-template-columns: 1fr 1fr;
+    padding: 19px 22px;
+    gap: 12px;
+  }
+  .agent-list .ticket-time {
+    grid-column: auto;
+    text-align: right;
+  }
+  .agent-list .ticket-title-cell {
+    grid-column: 1/-1;
+  }
+  .inbox-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .queue-order {
+    max-width: 125px;
+    text-align: right;
+  }
+}
+@media (max-width: 600px) {
+  .agent-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .agent-stats .stat-card {
+    min-height: 151px;
+    padding: 16px;
+  }
+  .agent-stats .stat-card > strong {
+    position: static;
+    margin: 15px 0 6px;
+    font-size: 30px;
+  }
+  .agent-stats .stat-card > div {
+    font-size: 11px;
+  }
+  .agent-stats .stat-card > div svg {
+    width: 14px;
+  }
+  .agent-stats .stat-card > p {
+    font-size: 10px;
+  }
+  .inbox-filters {
+    padding: 19px 17px;
+    gap: 15px 12px;
+  }
+  .filter-actions {
+    justify-content: space-between;
+    margin-top: 7px;
+  }
+  .inbox-filters .field label {
+    font-size: 11px;
+  }
+  .inbox-filters .field select {
+    font-size: 12px;
+    padding-left: 9px;
+    padding-right: 6px;
+  }
+  .workspace-ticket-summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 14px;
+    gap: 12px;
+  }
+  .workspace-ticket-summary > .ticket-badges {
+    flex-basis: 100%;
+  }
+  .workspace-ticket-summary > span {
+    margin-left: 0;
+  }
+  .workspace-ticket-summary > a {
+    margin-left: auto;
+  }
+  .agent-detail-layout > .ticket-info-rail {
+    grid-template-columns: 1fr;
+  }
+  .ticket-controls {
+    grid-row: auto;
+  }
+  .control-section .button {
+    min-height: 44px;
+  }
+  .control-section .field select {
+    min-height: 44px;
+  }
+  .agent-list .ticket-time {
+    font-size: 10px;
+  }
+  .workspace .message-heading time {
+    margin-left: 40px;
+    text-align: left;
+  }
+  .workspace .composer-mode-description {
+    line-height: 1.7;
+  }
+  .workspace .activity-card .pagination {
+    gap: 12px;
+  }
+}
+.page-heading > div {
+  min-width: 0;
+}
+.page-heading h1 {
+  overflow-wrap: anywhere;
+}
+.workspace-ticket-summary > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.auth-story h2 {
+  font-size: 48px;
+  line-height: 1.12;
+  letter-spacing: -0.05em;
+}
+.auth-story h2 span {
+  color: var(--green);
+}
+.auth-form-wrap h1 {
+  font-size: 30px;
+  letter-spacing: -0.045em;
+}
+@media (max-width: 1000px) {
+  .auth-story h2 {
+    font-size: 42px;
+  }
+}
+@media (max-width: 760px) {
+  .auth-form-wrap h1 {
+    font-size: 28px;
+  }
+}
+.workspace-main > .notice-success {
+  align-items: center;
+}
+.workspace-main > .notice-success > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+}
+.workspace-main > .notice-success .notice-action {
+  margin-top: 0;
+}
+.workspace-main > .notice-success .button {
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+.workspace-main > .notice-success .notice-action {
+  flex-shrink: 0;
+}
+.workspace-main > .notice-success .button {
+  white-space: nowrap;
+}
+.workspace-main > .notice-success strong {
+  min-width: 0;
+}
