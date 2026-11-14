@@ -14,6 +14,9 @@ export type AgentMessage = Schemas["AgentMessage"];
 export type PublicEvent = Schemas["PublicEvent"];
 export type AgentEvent = Schemas["AgentEvent"];
 export type Visibility = Schemas["Visibility"];
+export type Classification = Schemas["ClassificationResponse"];
+export type ClassificationRun = Schemas["ClassificationRun"];
+export type ClassificationState = Schemas["ClassificationState"];
 export type Page<T> = Omit<Schemas["Page_CustomerTicket_"], "items"> & {
   items: T[];
 };

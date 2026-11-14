@@ -9,6 +9,14 @@ from ..config import ConfigurationError, Settings
 
 
 class APISettings(Settings):
+    classification_enabled: bool = True
+    classification_worker_enabled: bool = True
+    classification_low_score_threshold: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+    classification_poll_seconds: int = Field(default=30, ge=1, le=3600)
+    classification_lease_seconds: int = Field(default=300, ge=30, le=3600)
+    classification_max_executions: int = Field(default=3, ge=1, le=5)
+    classification_retry_cooldown_seconds: int = Field(default=60, ge=10, le=3600)
+    classification_retry_limit_per_minute: int = Field(default=10, ge=1, le=100)
     firebase_project_id: str | None = None
     google_application_credentials: str | None = Field(default=None, repr=False)
     cors_allowed_origins: tuple[str, ...] = ()

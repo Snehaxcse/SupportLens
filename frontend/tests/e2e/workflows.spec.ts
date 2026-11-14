@@ -2,7 +2,13 @@ import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { mockServices, signIn, stateFor, uuid } from "./fixture";
+import {
+  mockServices,
+  signIn,
+  stateFor,
+  uuid,
+  syntheticClassification,
+} from "./fixture";
 const browserErrors = new WeakMap<Page, string[]>();
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
@@ -35,7 +41,7 @@ async function accessible(page: Page) {
   ).toEqual([]);
 }
 async function picture(page: Page, name: string, project: string) {
-  const folder = path.resolve("../artifacts/m3/visuals");
+  const folder = path.resolve("../artifacts/m4_a/visuals");
   await mkdir(folder, { recursive: true });
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement)
@@ -459,4 +465,133 @@ test("mobile navigation keyboard focus and sign-out", async ({
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
   }
   await expect(page).toHaveURL(/\/sign-in$/);
+});
+
+test("agent ML suggestions remain advisory through pending, success, failure and retry", async ({
+  page,
+}, info) => {
+  const state = stateFor("AGENT");
+  await mockServices(page, state);
+  await signIn(page);
+  await expect(page).toHaveURL(/\/agent$/);
+  await page.goto(`/agent/tickets/${uuid(1)}`);
+  const panel = page.getByRole("region", { name: "ML suggestion" });
+  await expect(panel.getByText("Not yet classified")).toBeVisible();
+  await panel
+    .getByRole("button", { name: "Classify ticket", exact: true })
+    .click();
+  await expect(panel.getByText("Queued", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Claim ticket", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    panel.getByRole("button", { name: "Retry classification" }),
+  ).toBeDisabled();
+  const first = state.classificationRuns[uuid(1)][0];
+  first.status = "RUNNING";
+  await panel.getByRole("button", { name: "Refresh suggestion" }).click();
+  await expect(panel.getByText("Processing", { exact: true })).toBeVisible();
+  Object.assign(first, {
+    status: "SUCCEEDED",
+    predicted_intent: "FEATURE",
+    confidence: 0.2,
+    artifact_verified: true,
+    low_score: true,
+    completed_at: "2026-01-01T12:01:00Z",
+    duration_ms: 2,
+    input_truncated: true,
+  });
+  await panel.getByRole("button", { name: "Refresh suggestion" }).click();
+  await expect(panel.getByText("20.0%", { exact: true })).toBeVisible();
+  await expect(panel.getByText(/Low advisory score/)).toContainText(
+    "has not been validated",
+  );
+  await expect(
+    panel.getByText(/Only the first 10,000 characters/),
+  ).toBeVisible();
+  await panel.getByText("Model details and limitations").click();
+  await expect(panel.getByText(/cannot detect UNKNOWN/)).toBeVisible();
+  await expect(panel.getByText(/Automated actions are disabled/)).toBeVisible();
+  await noOverflow(page);
+  await accessible(page);
+  await picture(page, "agent-classification", info.project.name);
+  await panel.getByRole("button", { name: "Retry classification" }).click();
+  await expect(panel.getByText("Queued", { exact: true })).toBeVisible();
+  expect(
+    state.requests
+      .filter(
+        (r) => r.method === "POST" && r.path.endsWith("/classification/retry"),
+      )
+      .at(-1)?.body,
+  ).toEqual({ expected_run_id: first.id });
+  const second = state.classificationRuns[uuid(1)][0];
+  Object.assign(second, {
+    status: "UNAVAILABLE",
+    failure_category: "MODEL_MISSING",
+    completed_at: "2026-01-01T12:02:00Z",
+    duration_ms: 0,
+  });
+  await panel.getByRole("button", { name: "Refresh suggestion" }).click();
+  await expect(
+    panel.getByText("Classifier unavailable", { exact: true }),
+  ).toBeVisible();
+  await expect(panel.getByText("Model score", { exact: true })).toHaveCount(0);
+  await panel.getByRole("button", { name: "Retry classification" }).click();
+  await expect(panel.getByText("Queued", { exact: true })).toBeVisible();
+  const third = state.classificationRuns[uuid(1)][0];
+  Object.assign(third, {
+    status: "FAILED",
+    failure_category: "UNSUPPORTED_OUTPUT",
+    completed_at: "2026-01-01T12:03:00Z",
+    duration_ms: 1,
+  });
+  await panel.getByRole("button", { name: "Refresh suggestion" }).click();
+  await expect(
+    panel.getByText("Classification failed", { exact: true }),
+  ).toBeVisible();
+  await expect(panel.getByText(/unsupported output/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start work", exact: true }),
+  ).toBeEnabled();
+  await noOverflow(page);
+  await accessible(page);
+});
+
+test("customer screens never request or display agent ML diagnostics", async ({
+  page,
+}) => {
+  const state = stateFor("CUSTOMER");
+  const diagnostic = syntheticClassification(uuid(1));
+  Object.assign(diagnostic, {
+    status: "SUCCEEDED",
+    predicted_intent: "FEATURE",
+    confidence: 0.9,
+    artifact_verified: true,
+    low_score: false,
+    completed_at: "2026-01-01T12:01:00Z",
+    duration_ms: 1,
+  });
+  state.classificationRuns[uuid(1)] = [diagnostic];
+  state.tickets[0].events.push({
+    id: uuid(88888),
+    event_type: "AI_DECISION_RECORDED",
+    action: "CLASSIFICATION_COMPLETED",
+    actor_id: null,
+    metadata: { model_version: "M4_DIAGNOSTICS_SENTINEL" },
+    created_at: "2026-01-01T12:01:00Z",
+  });
+  await mockServices(page, state);
+  await signIn(page);
+  await expect(page).toHaveURL(/\/customer$/);
+  await page.goto(`/customer/tickets/${uuid(1)}`);
+  await expect(
+    page.getByRole("heading", { name: state.tickets[0].subject }),
+  ).toBeVisible();
+  await expect(page.getByText("ML suggestion", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("M4_DIAGNOSTICS_SENTINEL")).toHaveCount(0);
+  expect(state.requests.some((r) => r.path.includes("/classification"))).toBe(
+    false,
+  );
+  await noOverflow(page);
+  await accessible(page);
 });

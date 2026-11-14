@@ -8,6 +8,7 @@ from ..api.errors import APIError
 from ..db.models import Ticket, TicketEvent, TicketMessage, User
 from ..domain.enums import Priority, TicketEventType, TicketStatus, UserRole, Visibility
 from ..domain.transitions import validate_transition
+from ..classification.queue import new_run
 from .schemas import (
     AgentDetail, AgentEvent, AgentMessage, AgentTicket, AssignableAgent, CustomerDetail,
     CustomerTicket, Page, PageQuery, PublicAuthor, PublicEvent, PublicMessage, TicketAction,
@@ -151,6 +152,7 @@ class TicketRepository:
         self.session.flush()
         self.event(ticket, TicketEventType.TICKET_CREATED, TicketAction.TICKET_CREATED, moment,
                    after={"status": "OPEN", "priority": "NORMAL"})
+        new_run(self.session, ticket.id, moment)
         self.session.flush()
         return self.summary(ticket)
 
@@ -232,8 +234,9 @@ class TicketRepository:
 
 
 class TicketService:
-    def __init__(self, database):
+    def __init__(self, database, *, on_created=None):
         self.database = database
+        self.on_created = on_created
 
     def run(self, principal, role, method, *args, write=False):
         with self.database.transaction(readonly=not write) as session:
@@ -252,7 +255,14 @@ class TicketService:
 
     def customer_list(self, actor, options): return self.run(actor, UserRole.CUSTOMER, "listing", options)
     def customer_detail(self, actor, identifier, options): return self.run(actor, UserRole.CUSTOMER, "detail", identifier, options)
-    def create(self, actor, payload): return self.run(actor, UserRole.CUSTOMER, "create", payload, write=True)
+    def create(self, actor, payload):
+        result = self.run(actor, UserRole.CUSTOMER, "create", payload, write=True)
+        if self.on_created is not None:
+            try:
+                self.on_created()
+            except Exception:
+                pass  # Creation is already committed; the durable pending row is polled on recovery.
+        return result
     def customer_message(self, actor, identifier, payload): return self.run(actor, UserRole.CUSTOMER, "message", identifier, payload, write=True)
     def reopen(self, actor, identifier): return self.run(actor, UserRole.CUSTOMER, "transition", identifier, TicketStatus.REOPENED, write=True)
     def agent_list(self, actor, options): return self.run(actor, UserRole.AGENT, "listing", options)

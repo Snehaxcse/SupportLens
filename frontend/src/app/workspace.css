@@ -405,3 +405,83 @@
 .workspace-main > .notice-success strong {
   min-width: 0;
 }
+/* Advisory classification stays independent of ticket controls and conversations. */
+.classification-card {
+  min-width: 0;
+  padding: 24px;
+}
+.classification-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.classification-heading h2 {
+  margin: 0;
+}
+.classification-review {
+  color: #795518;
+  background: #fff3da;
+  border: 1px solid #ead5ad;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.classification-state {
+  margin: 18px 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.classification-intent {
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 650;
+}
+.classification-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 0 0 12px;
+}
+.classification-facts dt,
+.classification-provenance dt {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.classification-facts dd,
+.classification-provenance dd {
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.classification-warning {
+  padding: 10px 12px;
+  border-left: 3px solid #a77723;
+  background: #fffaef;
+  color: #70501c;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 14px 0;
+}
+.classification-details {
+  margin: 18px 0;
+}
+.classification-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.classification-details[open] summary {
+  margin-bottom: 12px;
+}
+.classification-provenance {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+.classification-card > .button {
+  margin-top: 10px;
+}

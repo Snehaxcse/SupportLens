@@ -14,6 +14,8 @@ import type {
   Role,
   Status,
   Visibility,
+  ClassificationRun,
+  Classification,
 } from "../../src/lib/api/types";
 import { transitions } from "../../src/lib/tickets";
 export const uuid = (n: number) =>
@@ -65,12 +67,40 @@ export function stateFor(role: Role = "CUSTOMER", count = 3) {
     oobCalls: 0,
     forceClaimConflict: false,
     forceUnauthorized: false,
+    classificationRuns: {} as Record<string, ClassificationRun[]>,
     requests: [] as {
       method: string;
       path: string;
       body: Record<string, unknown>;
     }[],
     tick: 0,
+  };
+}
+export function syntheticClassification(
+  ticketId: string,
+  generation = 1,
+): ClassificationRun {
+  return {
+    id: uuid(70000 + generation),
+    ticket_id: ticketId,
+    generation,
+    status: "PENDING",
+    model_version: "synthetic-m1",
+    artifact_sha256: "0".repeat(64),
+    artifact_verified: false,
+    predicted_intent: null,
+    confidence: null,
+    score_type: "UNCALIBRATED_RAW_PROBABILITY",
+    requires_human_review: true,
+    automated_actions_allowed: false,
+    low_score: null,
+    advisory_threshold: 0.5,
+    threshold_validated: false,
+    input_truncated: false,
+    created_at: baseTime,
+    completed_at: null,
+    duration_ms: null,
+    failure_category: null,
   };
 }
 export type State = ReturnType<typeof stateFor>;
@@ -280,13 +310,16 @@ async function api(route: Route, state: State) {
     t.events.push({
       id: uuid(20000 + state.tick + t.events.length),
       event_type:
-        action === "STATUS_CHANGED" || action === "REOPENED"
-          ? "STATUS_CHANGED"
-          : action === "ASSIGNMENT_CHANGED"
-            ? "ASSIGNMENT_CHANGED"
-            : action === "TICKET_CREATED"
-              ? "TICKET_CREATED"
-              : "REPLY_ADDED",
+        action === "CLASSIFICATION_REQUESTED" ||
+        action === "CLASSIFICATION_COMPLETED"
+          ? "AI_DECISION_RECORDED"
+          : action === "STATUS_CHANGED" || action === "REOPENED"
+            ? "STATUS_CHANGED"
+            : action === "ASSIGNMENT_CHANGED"
+              ? "ASSIGNMENT_CHANGED"
+              : action === "TICKET_CREATED"
+                ? "TICKET_CREATED"
+                : "REPLY_ADDED",
       action,
       actor_id: state.profile.id,
       metadata,
@@ -356,6 +389,53 @@ async function api(route: Route, state: State) {
   const t = state.tickets.find((t) => t.id === remainder[0]);
   if (!t || (!agent && t.customer_id !== state.profile.id))
     return error(404, "ticket_not_found");
+  if (agent && remainder[1] === "classification") {
+    const runs = state.classificationRuns[t.id] || [];
+    const current = runs[0] || null;
+    if (method === "GET" && remainder.length === 2) {
+      const response: Classification = {
+        ticket_id: t.id,
+        status: current?.status || "NOT_REQUESTED",
+        current,
+        recent_runs: runs.slice(0, 5),
+        total_runs: runs.length,
+        supported_intents: [
+          "ACCOUNT_ACCESS",
+          "ACCOUNT_SECURITY",
+          "BILLING_PAYMENT",
+          "SUBSCRIPTION",
+          "APP_TECHNICAL",
+          "CONTENT",
+          "FEATURE",
+        ],
+        unsupported_intents: ["UNKNOWN", "NON_SUPPORT", "OTHER_SUPPORT"],
+        model_limitation:
+          "This seven-class model cannot detect UNKNOWN, NON_SUPPORT or OTHER_SUPPORT. APP_TECHNICAL recall was 0/4.",
+        requires_human_review: true,
+        automated_actions_allowed: false,
+        retry_allowed:
+          !current || !["PENDING", "RUNNING"].includes(current.status),
+        retry_available_at: null,
+      };
+      return send(response);
+    }
+    if (method === "POST" && remainder[2] === "retry") {
+      if (Object.keys(body).length !== 1 || !("expected_run_id" in body))
+        return error(422, "invalid_request");
+      if (current && ["PENDING", "RUNNING"].includes(current.status))
+        return send(current, 202);
+      if ((current?.id || null) !== body.expected_run_id)
+        return error(409, "classification_changed");
+      const next = syntheticClassification(
+        t.id,
+        (current?.generation || 0) + 1,
+      );
+      state.classificationRuns[t.id] = [next, ...runs];
+      event(t, "CLASSIFICATION_REQUESTED", { run_id: next.id });
+      return send(next, 202);
+    }
+    return error(404, "ticket_not_found");
+  }
   if (remainder.length === 1 && method === "GET") {
     const messagePage = Number(url.searchParams.get("messages_page") || 1),
       eventPage = Number(

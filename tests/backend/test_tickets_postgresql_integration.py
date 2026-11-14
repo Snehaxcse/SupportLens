@@ -183,7 +183,14 @@ def test_live_ticket_customer_agent_lifecycle_over_local_http(ticket_http):
         extra = call("POST", "/api/v1/tickets", expected=201, json={"subject": "Synthetic direct resolution", "description": "Synthetic"})
         call("PATCH", "/api/v1/agent/tickets/"+extra["id"]+"/status", "agent", json={"status": "RESOLVED"})  # OPEN -> RESOLVED
         schema = fixture.app.openapi()
-        assert len([p for p in schema["paths"] if p.startswith("/api/v1/agent")]) == 9
+        assert {p for p in schema["paths"] if p.startswith("/api/v1/agent")} == {
+            "/api/v1/agent/tickets", "/api/v1/agent/tickets/{ticket_id}",
+            "/api/v1/agent/tickets/{ticket_id}/claim", "/api/v1/agent/tickets/{ticket_id}/assignment",
+            "/api/v1/agent/tickets/{ticket_id}/status", "/api/v1/agent/tickets/{ticket_id}/priority",
+            "/api/v1/agent/tickets/{ticket_id}/messages", "/api/v1/agent/tickets/{ticket_id}/events",
+            "/api/v1/agent/users", "/api/v1/agent/tickets/{ticket_id}/classification",
+            "/api/v1/agent/tickets/{ticket_id}/classification/retry",
+        }
         Path("artifacts/m2_c/runtime_ticket_lifecycle.json").write_text(json.dumps({
             "url": base, "real_tcp_http": True, "real_postgresql": True, "firebase_identity": "synthetic verifier only in isolated fixture",
             "write_target": "SupportLens_test, outer transaction rolled back", "checks": statuses,

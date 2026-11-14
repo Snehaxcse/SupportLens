@@ -8,6 +8,8 @@ import type {
   InboxQuery,
   Page,
   Profile,
+  Classification,
+  ClassificationRun,
   PublicMessage,
   Schemas,
 } from "./types";
@@ -45,6 +47,12 @@ export function errorMessage(
       "The ticket response could not be displayed safely. Refresh or contact the administrator.",
     configuration:
       "Frontend configuration is incomplete or invalid. Review the public environment variable names in the setup guide.",
+    classification_changed:
+      "The classification changed. Refresh the suggestion before requesting another run.",
+    classification_retry_rate_limited:
+      "Please wait for the classification retry cooldown or budget to reset, then refresh the suggestion.",
+    classification_unavailable:
+      "The ML suggestion is temporarily unavailable. You can continue working on the ticket.",
   };
   if (messages[code]) return messages[code];
   if (status === 401)
@@ -264,6 +272,33 @@ export class ApiClient {
       { signal },
     );
   }
+  async classification(id: string, signal?: AbortSignal) {
+    const data = await this.request<Classification>(
+      `/api/v1/agent/tickets/${encodeURIComponent(id)}/classification`,
+      { signal },
+    );
+    if (
+      data.ticket_id !== id ||
+      data.requires_human_review !== true ||
+      data.automated_actions_allowed !== false ||
+      (data.current && !safeClassificationRun(data.current, id)) ||
+      data.recent_runs.some((run) => !safeClassificationRun(run, id))
+    )
+      throw new ApiError(502, "invalid_projection");
+    return data;
+  }
+  async retryClassification(
+    id: string,
+    body: Schemas["ClassificationRetryRequest"],
+  ) {
+    const data = await this.request<ClassificationRun>(
+      `/api/v1/agent/tickets/${encodeURIComponent(id)}/classification/retry`,
+      { method: "POST", body },
+    );
+    if (!safeClassificationRun(data, id))
+      throw new ApiError(502, "invalid_projection");
+    return data;
+  }
   claim(id: string) {
     return this.request<AgentTicket>(
       `/api/v1/agent/tickets/${encodeURIComponent(id)}/claim`,
@@ -294,6 +329,24 @@ export class ApiClient {
       { method: "POST", body },
     );
   }
+}
+function safeClassificationRun(run: ClassificationRun, ticketId: string) {
+  return (
+    run.ticket_id === ticketId &&
+    run.requires_human_review === true &&
+    run.automated_actions_allowed === false &&
+    run.threshold_validated === false &&
+    run.score_type === "UNCALIBRATED_RAW_PROBABILITY" &&
+    (run.status !== "SUCCEEDED" ||
+      (run.confidence !== null &&
+        run.predicted_intent !== null &&
+        run.artifact_verified &&
+        run.failure_category === null)) &&
+    (run.confidence === null ||
+      (Number.isFinite(run.confidence) &&
+        run.confidence >= 0 &&
+        run.confidence <= 1))
+  );
 }
 export async function resolveProfile(
   api: Pick<ApiClient, "me" | "onboard">,

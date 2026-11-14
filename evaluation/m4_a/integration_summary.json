@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "model_version": "m1_tfidf_lr_v1",
+  "artifact_sha256": "6c5d3088aa6222658d4ce5a5d4753c2496cebdf11f8401aa3e959fe29bd63e4f",
+  "status": "PASS",
+  "synthetic_cases": [
+    {
+      "case": "SYNTHETIC_LOGIN",
+      "status": "SUCCEEDED",
+      "predicted_intent": "ACCOUNT_ACCESS",
+      "uncalibrated_model_score": 0.24502626723883555,
+      "low_score_advisory_flag": true,
+      "input_characters": 86,
+      "input_truncated": false,
+      "m1_prediction_parity": true,
+      "deterministic": true
+    },
+    {
+      "case": "SYNTHETIC_SECURITY",
+      "status": "SUCCEEDED",
+      "predicted_intent": "ACCOUNT_SECURITY",
+      "uncalibrated_model_score": 0.19838432293631755,
+      "low_score_advisory_flag": true,
+      "input_characters": 81,
+      "input_truncated": false,
+      "m1_prediction_parity": true,
+      "deterministic": true
+    },
+    {
+      "case": "SYNTHETIC_BILLING",
+      "status": "SUCCEEDED",
+      "predicted_intent": "BILLING_PAYMENT",
+      "uncalibrated_model_score": 0.21286140132991824,
+      "low_score_advisory_flag": true,
+      "input_characters": 95,
+      "input_truncated": false,
+      "m1_prediction_parity": true,
+      "deterministic": true
+    },
+    {
+      "case": "SYNTHETIC_PLAYBACK",
+      "status": "SUCCEEDED",
+      "predicted_intent": "FEATURE",
+      "uncalibrated_model_score": 0.19247733960577018,
+      "low_score_advisory_flag": true,
+      "input_characters": 81,
+      "input_truncated": false,
+      "m1_prediction_parity": true,
+      "deterministic": true
+    },
+    {
+      "case": "SYNTHETIC_FEATURE",
+      "status": "SUCCEEDED",
+      "predicted_intent": "CONTENT",
+      "uncalibrated_model_score": 0.19471265799003032,
+      "low_score_advisory_flag": true,
+      "input_characters": 83,
+      "input_truncated": false,
+      "m1_prediction_parity": true,
+      "deterministic": true
+    },
+    {
+      "case": "SYNTHETIC_LONG",
+      "status": "SUCCEEDED",
+      "predicted_intent": "BILLING_PAYMENT",
+      "uncalibrated_model_score": 0.20313409494319432,
+      "low_score_advisory_flag": true,
+      "input_characters": 10000,
+      "input_truncated": true,
+      "m1_prediction_parity": true,
+      "deterministic": true
+    }
+  ],
+  "advisory_threshold": 0.5,
+  "threshold_validated": false,
+  "invalid_input_rejected": true,
+  "simulated_disabled_model_distinguished": true,
+  "requires_human_review": true,
+  "automated_actions_allowed": false,
+  "predictive_quality_measured": false,
+  "heldout_reevaluated": false,
+  "model_retrained": false,
+  "scope": "Synthetic invocation/mapping/input-boundary correctness. Persistence and UI are verified by separate tests and runtime checks."
+}

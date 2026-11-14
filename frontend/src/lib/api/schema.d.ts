@@ -297,6 +297,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent/tickets/{ticket_id}/classification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Classification */
+        get: operations["get_classification_api_v1_agent_tickets__ticket_id__classification_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/tickets/{ticket_id}/classification/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Classification */
+        post: operations["retry_classification_api_v1_agent_tickets__ticket_id__classification_retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -432,6 +466,117 @@ export interface components {
             /** Assigned Agent Id */
             assigned_agent_id: string | null;
         };
+        /** ClassificationResponse */
+        ClassificationResponse: {
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            status: components["schemas"]["ClassificationState"];
+            current: components["schemas"]["ClassificationRun"] | null;
+            /** Recent Runs */
+            recent_runs: components["schemas"]["ClassificationRun"][];
+            /** Total Runs */
+            total_runs: number;
+            /** Supported Intents */
+            supported_intents: string[];
+            /** Unsupported Intents */
+            unsupported_intents: string[];
+            /** Model Limitation */
+            model_limitation: string;
+            /**
+             * Requires Human Review
+             * @default true
+             * @constant
+             */
+            requires_human_review: true;
+            /**
+             * Automated Actions Allowed
+             * @default false
+             * @constant
+             */
+            automated_actions_allowed: false;
+            /** Retry Allowed */
+            retry_allowed: boolean;
+            /** Retry Available At */
+            retry_available_at: string | null;
+        };
+        /** ClassificationRetryRequest */
+        ClassificationRetryRequest: {
+            /** Expected Run Id */
+            expected_run_id: string | null;
+        };
+        /** ClassificationRun */
+        ClassificationRun: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            /** Generation */
+            generation: number;
+            status: components["schemas"]["ClassificationState"];
+            /** Model Version */
+            model_version: string;
+            /** Artifact Sha256 */
+            artifact_sha256: string;
+            /** Artifact Verified */
+            artifact_verified: boolean;
+            predicted_intent: components["schemas"]["Intent"] | null;
+            /** Confidence */
+            confidence: number | null;
+            /**
+             * Score Type
+             * @default UNCALIBRATED_RAW_PROBABILITY
+             * @constant
+             */
+            score_type: "UNCALIBRATED_RAW_PROBABILITY";
+            /**
+             * Requires Human Review
+             * @default true
+             * @constant
+             */
+            requires_human_review: true;
+            /**
+             * Automated Actions Allowed
+             * @default false
+             * @constant
+             */
+            automated_actions_allowed: false;
+            /** Low Score */
+            low_score: boolean | null;
+            /** Advisory Threshold */
+            advisory_threshold: number;
+            /**
+             * Threshold Validated
+             * @default false
+             * @constant
+             */
+            threshold_validated: false;
+            /** Input Truncated */
+            input_truncated: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Completed At */
+            completed_at: string | null;
+            /** Duration Ms */
+            duration_ms: number | null;
+            failure_category: components["schemas"]["FailureCategory"] | null;
+        };
+        /**
+         * ClassificationState
+         * @enum {string}
+         */
+        ClassificationState: "NOT_REQUESTED" | "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "UNAVAILABLE";
         /** CustomerDetail */
         CustomerDetail: {
             /**
@@ -504,11 +649,21 @@ export interface components {
             /** Request Id */
             request_id: string;
         };
+        /**
+         * FailureCategory
+         * @enum {string}
+         */
+        FailureCategory: "MODEL_MISSING" | "ARTIFACT_INVALID" | "RUNTIME_INCOMPATIBLE" | "MODEL_DISABLED" | "INVALID_INPUT" | "INFERENCE_FAILED" | "UNSUPPORTED_OUTPUT" | "RECOVERY_EXHAUSTED";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * Intent
+         * @enum {string}
+         */
+        Intent: "ACCOUNT_ACCESS" | "ACCOUNT_SECURITY" | "BILLING_PAYMENT" | "SUBSCRIPTION" | "APP_TECHNICAL" | "CONTENT" | "FEATURE" | "OTHER_SUPPORT" | "NON_SUPPORT" | "UNKNOWN";
         /** OnboardingRequest */
         OnboardingRequest: Record<string, never>;
         /** Page[AgentEvent] */
@@ -657,7 +812,7 @@ export interface components {
          * TicketAction
          * @enum {string}
          */
-        TicketAction: "TICKET_CREATED" | "CUSTOMER_REPLY" | "AGENT_REPLY" | "INTERNAL_NOTE" | "ASSIGNMENT_CHANGED" | "STATUS_CHANGED" | "REOPENED" | "PRIORITY_CHANGED" | "LEGACY_EVENT";
+        TicketAction: "TICKET_CREATED" | "CUSTOMER_REPLY" | "AGENT_REPLY" | "INTERNAL_NOTE" | "ASSIGNMENT_CHANGED" | "STATUS_CHANGED" | "REOPENED" | "PRIORITY_CHANGED" | "CLASSIFICATION_REQUESTED" | "CLASSIFICATION_COMPLETED" | "LEGACY_EVENT";
         /** TicketCreate */
         TicketCreate: {
             /** Subject */
@@ -2033,6 +2188,207 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_classification_api_v1_agent_tickets__ticket_id__classification_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassificationResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    retry_classification_api_v1_agent_tickets__ticket_id__classification_retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassificationRetryRequest"];
+            };
+        };
+        responses: {
+            /** @description Completed attempt returned by durable replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassificationRun"];
+                };
+            };
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassificationRun"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

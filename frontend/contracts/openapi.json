@@ -1910,6 +1910,262 @@
           }
         ]
       }
+    },
+    "/api/v1/agent/tickets/{ticket_id}/classification": {
+      "get": {
+        "tags": [
+          "Agent classification"
+        ],
+        "summary": "Get Classification",
+        "operationId": "get_classification_api_v1_agent_tickets__ticket_id__classification_get",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassificationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/tickets/{ticket_id}/classification/retry": {
+      "post": {
+        "tags": [
+          "Agent classification"
+        ],
+        "summary": "Retry Classification",
+        "operationId": "retry_classification_api_v1_agent_tickets__ticket_id__classification_retry_post",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassificationRetryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassificationRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "200": {
+            "description": "Completed attempt returned by durable replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassificationRun"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2228,6 +2484,301 @@
         ],
         "title": "AssignmentChange"
       },
+      "ClassificationResponse": {
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Ticket Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ClassificationState"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClassificationRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recent_runs": {
+            "items": {
+              "$ref": "#/components/schemas/ClassificationRun"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Recent Runs"
+          },
+          "total_runs": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Runs"
+          },
+          "supported_intents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supported Intents"
+          },
+          "unsupported_intents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unsupported Intents"
+          },
+          "model_limitation": {
+            "type": "string",
+            "title": "Model Limitation"
+          },
+          "requires_human_review": {
+            "type": "boolean",
+            "const": true,
+            "title": "Requires Human Review",
+            "default": true
+          },
+          "automated_actions_allowed": {
+            "type": "boolean",
+            "const": false,
+            "title": "Automated Actions Allowed",
+            "default": false
+          },
+          "retry_allowed": {
+            "type": "boolean",
+            "title": "Retry Allowed"
+          },
+          "retry_available_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Available At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticket_id",
+          "status",
+          "current",
+          "recent_runs",
+          "total_runs",
+          "supported_intents",
+          "unsupported_intents",
+          "model_limitation",
+          "retry_allowed",
+          "retry_available_at"
+        ],
+        "title": "ClassificationResponse"
+      },
+      "ClassificationRetryRequest": {
+        "properties": {
+          "expected_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Run Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_run_id"
+        ],
+        "title": "ClassificationRetryRequest"
+      },
+      "ClassificationRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Ticket Id"
+          },
+          "generation": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Generation"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ClassificationState"
+          },
+          "model_version": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Model Version"
+          },
+          "artifact_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Artifact Sha256"
+          },
+          "artifact_verified": {
+            "type": "boolean",
+            "title": "Artifact Verified"
+          },
+          "predicted_intent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Intent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "score_type": {
+            "type": "string",
+            "const": "UNCALIBRATED_RAW_PROBABILITY",
+            "title": "Score Type",
+            "default": "UNCALIBRATED_RAW_PROBABILITY"
+          },
+          "requires_human_review": {
+            "type": "boolean",
+            "const": true,
+            "title": "Requires Human Review",
+            "default": true
+          },
+          "automated_actions_allowed": {
+            "type": "boolean",
+            "const": false,
+            "title": "Automated Actions Allowed",
+            "default": false
+          },
+          "low_score": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Score"
+          },
+          "advisory_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Advisory Threshold"
+          },
+          "threshold_validated": {
+            "type": "boolean",
+            "const": false,
+            "title": "Threshold Validated",
+            "default": false
+          },
+          "input_truncated": {
+            "type": "boolean",
+            "title": "Input Truncated"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "failure_category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailureCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "ticket_id",
+          "generation",
+          "status",
+          "model_version",
+          "artifact_sha256",
+          "artifact_verified",
+          "predicted_intent",
+          "confidence",
+          "low_score",
+          "advisory_threshold",
+          "input_truncated",
+          "created_at",
+          "completed_at",
+          "duration_ms",
+          "failure_category"
+        ],
+        "title": "ClassificationRun"
+      },
+      "ClassificationState": {
+        "type": "string",
+        "enum": [
+          "NOT_REQUESTED",
+          "PENDING",
+          "RUNNING",
+          "SUCCEEDED",
+          "FAILED",
+          "UNAVAILABLE"
+        ],
+        "title": "ClassificationState"
+      },
       "CustomerDetail": {
         "properties": {
           "id": {
@@ -2406,6 +2957,20 @@
         ],
         "title": "ErrorResponse"
       },
+      "FailureCategory": {
+        "type": "string",
+        "enum": [
+          "MODEL_MISSING",
+          "ARTIFACT_INVALID",
+          "RUNTIME_INCOMPATIBLE",
+          "MODEL_DISABLED",
+          "INVALID_INPUT",
+          "INFERENCE_FAILED",
+          "UNSUPPORTED_OUTPUT",
+          "RECOVERY_EXHAUSTED"
+        ],
+        "title": "FailureCategory"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2418,6 +2983,22 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "Intent": {
+        "type": "string",
+        "enum": [
+          "ACCOUNT_ACCESS",
+          "ACCOUNT_SECURITY",
+          "BILLING_PAYMENT",
+          "SUBSCRIPTION",
+          "APP_TECHNICAL",
+          "CONTENT",
+          "FEATURE",
+          "OTHER_SUPPORT",
+          "NON_SUPPORT",
+          "UNKNOWN"
+        ],
+        "title": "Intent"
       },
       "OnboardingRequest": {
         "properties": {},
@@ -2842,6 +3423,8 @@
           "STATUS_CHANGED",
           "REOPENED",
           "PRIORITY_CHANGED",
+          "CLASSIFICATION_REQUESTED",
+          "CLASSIFICATION_COMPLETED",
           "LEGACY_EVENT"
         ],
         "title": "TicketAction"

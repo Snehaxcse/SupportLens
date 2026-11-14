@@ -1,5 +1,6 @@
 """Minimal API factory: health, readiness, current user and authenticated onboarding."""
 from contextlib import asynccontextmanager
+import asyncio
 from datetime import datetime
 import json
 import logging
@@ -19,6 +20,10 @@ from ..auth.users import UserService
 from ..domain.enums import UserRole
 from ..tickets.routes import install_ticket_routes
 from ..tickets.service import TicketService
+from ..classification.inference import InferenceService
+from ..classification.service import ClassificationOptions, ClassificationService
+from ..classification.worker import ClassificationWorker
+from ..classification.routes import router as classification_router
 from .config import load_api_settings
 from .database import Database
 from .errors import APIError
@@ -65,18 +70,31 @@ def create_app(settings=None, *, runtime=None):
         handler.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(handler)
     logger.setLevel(logging.INFO)
-    if runtime is None:
+    owned_runtime = runtime is None
+    if owned_runtime:
         database = Database(settings)
         runtime = SimpleNamespace(database=database, verifier=FirebaseVerifier(settings), users=UserService(database))
+    if not hasattr(runtime, "classifications"):
+        runtime.classifications = ClassificationService(runtime.database, ClassificationOptions.from_settings(settings))
+    if owned_runtime and settings.classification_worker_enabled and settings.firebase_project_id:
+        runtime.classification_worker = ClassificationWorker(runtime.classifications,
+            InferenceService(enabled=settings.classification_enabled), poll_seconds=settings.classification_poll_seconds)
     if not hasattr(runtime, "tickets"):
-        runtime.tickets = TicketService(runtime.database)
+        worker = getattr(runtime, "classification_worker", None)
+        runtime.tickets = TicketService(runtime.database, on_created=worker.wake if worker else None)
 
     @asynccontextmanager
     async def lifespan(app):
         # No database or Firebase connection is required for process health.
         try:
+            worker = getattr(runtime, "classification_worker", None)
+            if worker is not None:
+                worker.start()
             yield
         finally:
+            worker = getattr(runtime, "classification_worker", None)
+            if worker is not None:
+                await asyncio.to_thread(worker.stop)
             runtime.database.close()
             runtime.verifier.close()
 
@@ -142,4 +160,5 @@ def create_app(settings=None, *, runtime=None):
         return UserResponse.model_validate(runtime.users.onboard(identity))
 
     install_ticket_routes(app)
+    app.include_router(classification_router)
     return app
