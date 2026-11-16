@@ -63,8 +63,15 @@ class DraftProcessor:
         if not catalog:
             self.service.complete(lease, "ABSTAINED", "INSUFFICIENT_EVIDENCE", **provenance)
             return
+        lookup = None
+        if getattr(self.service, "cache", None) and self.service.cache_enabled(lease.ticket_id):
+            lookup = self.service.cache.lookup(self.service, actor, lease, evidence)
+            if lookup.candidate is not None and self.service.complete(
+                    lease, "DRAFT", draft=lookup.candidate.text, evidence=lookup.evidence, cache_match=lookup, **provenance):
+                return
+            provenance["cache_lookup"] = lookup.metadata(discarded=lookup.candidate is not None)
         for attempt in range(MAX_ATTEMPTS):
-            denial = self.service.reserve(lease, evidence)
+            denial = self.service.reserve(lease, evidence, miss_key=lookup.miss_key) if lookup else self.service.reserve(lease, evidence)
             if denial:
                 if denial != "LEASE_LOST":
                     state = "ABSTAINED" if denial in {"EVIDENCE_CHANGED", "POLICY_CHANGED"} else "FAILED"

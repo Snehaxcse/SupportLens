@@ -40,10 +40,10 @@ class Database:
         except (SQLAlchemyError, ConfigurationError):
             raise unavailable() from None
 
-    def ready(self):
+    def ready(self, *, required_revision=None):
         with self.engine(True).connect() as connection:
             inspect_connection(connection, self.settings.spec(self.target, readonly=True))
-            verify_schema(connection)
+            verify_schema(connection, required_revision=required_revision)
 
     def close(self):
         for engine in self._engines.values():

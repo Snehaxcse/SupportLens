@@ -85,6 +85,13 @@ export function errorMessage(
       "Only the current approved draft can be sent. Refresh the workflow.",
     draft_synthetic_send:
       "This draft is outside the authorized synthetic send scope.",
+    cache_stale:
+      "Reuse approval or its evidence changed. Request a fresh draft.",
+    cache_not_eligible:
+      "This draft or issue is outside the general reuse policy.",
+    cache_duplicate: "This guidance already has an active reuse approval.",
+    cache_embedding_unavailable:
+      "Local embeddings are unavailable. Reuse approval was not saved.",
   };
   if (messages[code]) return messages[code];
   if (status === 401)
@@ -369,6 +376,25 @@ export class ApiClient {
       data.message.visibility !== "PUBLIC"
     )
       throw new ApiError(502, "invalid_projection");
+    return data;
+  }
+  approveReuse(id: string, runId: string, body: Schemas["ReuseApproval"]) {
+    return this.request<Schemas["CacheSummary"]>(
+      `/api/v1/agent/tickets/${encodeURIComponent(id)}/drafts/${encodeURIComponent(runId)}/reuse`,
+      { method: "POST", body },
+    );
+  }
+  async revokeReuse(
+    id: string,
+    runId: string,
+    cacheId: string,
+    body: Schemas["ReuseRevocation"],
+  ) {
+    const data = await this.request<Schemas["CacheSummary"]>(
+      `/api/v1/agent/tickets/${encodeURIComponent(id)}/drafts/${encodeURIComponent(runId)}/reuse/${encodeURIComponent(cacheId)}/revoke`,
+      { method: "POST", body },
+    );
+    if (data.id !== cacheId) throw new ApiError(502, "invalid_projection");
     return data;
   }
   knowledgeList(query: Query, signal?: AbortSignal) {

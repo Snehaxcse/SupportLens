@@ -504,6 +504,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent/tickets/{ticket_id}/drafts/{run_id}/reuse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Reuse */
+        post: operations["approve_reuse_api_v1_agent_tickets__ticket_id__drafts__run_id__reuse_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/tickets/{ticket_id}/drafts/{run_id}/reuse/{cache_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Reuse */
+        post: operations["revoke_reuse_api_v1_agent_tickets__ticket_id__drafts__run_id__reuse__cache_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/response-cache/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cache Metrics */
+        get: operations["cache_metrics_api_v1_agent_response_cache_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -784,6 +835,80 @@ export interface components {
             /** Assigned Agent Id */
             assigned_agent_id: string | null;
         };
+        /** CacheMetrics */
+        CacheMetrics: {
+            /** Entries */
+            entries: number;
+            /** Active Entries */
+            active_entries: number;
+            /** Invalidations */
+            invalidations: number;
+            /** Expired Entries */
+            expired_entries: number;
+            /** Incompatible Entries */
+            incompatible_entries: number;
+            /** Lookups */
+            lookups: number;
+            /** Hits */
+            hits: number;
+            /** Misses */
+            misses: number;
+            /** Rejected Candidates */
+            rejected_candidates: number;
+            /** Incompatible Candidates */
+            incompatible_candidates: number;
+            /** Average Lookup Ms */
+            average_lookup_ms: number | null;
+            /** Gemini Generation Bypasses */
+            gemini_generation_bypasses: number;
+            /** Gemini Requests Attempted */
+            gemini_requests_attempted: number;
+            /** Gemini Responses Observed */
+            gemini_responses_observed: number;
+            /** Pacific Day Reservations */
+            pacific_day_reservations: number;
+        };
+        /** CacheOrigin */
+        CacheOrigin: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Version */
+            version: number;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Status */
+            status?: ("ACTIVE" | "INVALIDATED" | "EXPIRED" | "INCOMPATIBLE") | null;
+        };
+        /** CacheSummary */
+        CacheSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Version */
+            version: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACTIVE" | "INVALIDATED" | "EXPIRED" | "INCOMPATIBLE";
+            /** Reason */
+            reason: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Hit Count */
+            hit_count: number;
+        };
         /** ClassificationResponse */
         ClassificationResponse: {
             /**
@@ -986,6 +1111,8 @@ export interface components {
             page: number;
             /** Items */
             items: components["schemas"]["DraftRun"][];
+            /** Reuse Enabled */
+            reuse_enabled?: boolean | null;
         };
         /** DraftRun */
         DraftRun: {
@@ -1048,6 +1175,10 @@ export interface components {
             send_candidate: boolean;
             /** Sent Message Id */
             sent_message_id?: string | null;
+            cache_origin?: components["schemas"]["CacheOrigin"] | null;
+            /** Cache Lookup */
+            cache_lookup?: ("HIT" | "MISS") | null;
+            reuse_approval?: components["schemas"]["CacheSummary"] | null;
         };
         /** EmptyRequest */
         EmptyRequest: Record<string, never>;
@@ -1313,6 +1444,31 @@ export interface components {
             /** Items */
             items: components["schemas"]["Evidence"][];
         };
+        /** ReuseApproval */
+        ReuseApproval: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Expected Draft Version */
+            expected_draft_version: number;
+            /**
+             * Confirm General Reuse
+             * @constant
+             */
+            confirm_general_reuse: true;
+        };
+        /** ReuseRevocation */
+        ReuseRevocation: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Expected Version */
+            expected_version: number;
+        };
         /** ReviewDraft */
         ReviewDraft: {
             /**
@@ -1393,7 +1549,7 @@ export interface components {
          * TicketAction
          * @enum {string}
          */
-        TicketAction: "TICKET_CREATED" | "CUSTOMER_REPLY" | "AGENT_REPLY" | "INTERNAL_NOTE" | "ASSIGNMENT_CHANGED" | "STATUS_CHANGED" | "REOPENED" | "PRIORITY_CHANGED" | "CLASSIFICATION_REQUESTED" | "CLASSIFICATION_COMPLETED" | "DRAFT_REQUESTED" | "DRAFT_COMPLETED" | "DRAFT_EDIT" | "DRAFT_APPROVE" | "DRAFT_REJECT" | "WORKFLOW_POLICY_EVALUATED" | "DRAFT_SENT" | "LEGACY_EVENT";
+        TicketAction: "TICKET_CREATED" | "CUSTOMER_REPLY" | "AGENT_REPLY" | "INTERNAL_NOTE" | "ASSIGNMENT_CHANGED" | "STATUS_CHANGED" | "REOPENED" | "PRIORITY_CHANGED" | "CLASSIFICATION_REQUESTED" | "CLASSIFICATION_COMPLETED" | "DRAFT_REQUESTED" | "DRAFT_COMPLETED" | "DRAFT_EDIT" | "DRAFT_APPROVE" | "DRAFT_REJECT" | "WORKFLOW_POLICY_EVALUATED" | "DRAFT_SENT" | "CACHE_REUSE_APPROVED" | "CACHE_REUSE_REVOKED" | "LEGACY_EVENT";
         /** TicketCreate */
         TicketCreate: {
             /** Subject */
@@ -3466,6 +3622,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_reuse_api_v1_agent_tickets__ticket_id__drafts__run_id__reuse_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReuseApproval"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CacheSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_reuse_api_v1_agent_tickets__ticket_id__drafts__run_id__reuse__cache_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+                run_id: string;
+                cache_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReuseRevocation"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CacheSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cache_metrics_api_v1_agent_response_cache_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CacheMetrics"];
                 };
             };
         };

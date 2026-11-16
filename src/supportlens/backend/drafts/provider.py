@@ -26,6 +26,8 @@ class ProviderResult:
     category: str | None = None
     usage: dict | None = None
     latency_ms: int = 0
+    external_attempt: bool = False
+    external_response: bool = False
 
 
 class Gemini:
@@ -49,13 +51,16 @@ class Gemini:
             "thinkingConfig": {"thinkingLevel": "minimal"},
         }
         started = monotonic()
+        attempted, observed = False, False
 
         def result(**fields):
-            return ProviderResult(latency_ms=round((monotonic() - started) * 1000), **fields)
+            return ProviderResult(latency_ms=round((monotonic() - started) * 1000),
+                                  external_attempt=attempted, external_response=observed, **fields)
 
         try:
             with httpx.Client(timeout=httpx.Timeout(self.timeout, connect=5), transport=self._transport,
                               follow_redirects=False, trust_env=False) as client:
+                attempted = self._transport is None
                 with client.stream("POST", url, headers={
                     "x-goog-api-key": self._key.get_secret_value(), "Accept-Encoding": "identity",
                 }, json={
@@ -63,6 +68,7 @@ class Gemini:
                     "contents": [{"role": "user", "parts": [{"text": payload}]}],
                     "generationConfig": config,
                 }) as response:
+                    observed = attempted
                     if response.status_code == 429:
                         return result(category="PROVIDER_QUOTA")
                     if response.status_code in (500, 502, 503, 504):

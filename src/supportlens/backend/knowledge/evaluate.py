@@ -13,7 +13,7 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from ..config import Environment, load_settings
-from ..db.migrations import KNOWLEDGE_REVISION, verify_schema
+from ..db.migrations import CACHE_REVISION, KNOWLEDGE_REVISION, verify_schema
 from ..db.models import User
 from ..db.preflight import inspect_connection, preflight
 from ..db.session import build_engine
@@ -133,7 +133,8 @@ def main(argv=None):
                 transaction = connection.begin()
                 try:
                     inspect_connection(connection, settings.spec(Environment.TEST), require_readonly=False)
-                    verify_schema(connection, required_revision=KNOWLEDGE_REVISION)
+                    if verify_schema(connection)["revision"] not in {KNOWLEDGE_REVISION, CACHE_REVISION}:
+                        raise RuntimeError("The verified knowledge migration is required.")
                     result = evaluate(EvaluationDatabase(connection), json.loads(fixture_bytes), args.top_k)
                 finally:
                     transaction.rollback()

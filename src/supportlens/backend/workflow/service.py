@@ -58,10 +58,12 @@ class Workflow:
         self.threshold = threshold
         self.synthetic_customer_uid = synthetic_customer_uid
 
-    def inspect(self, repo, ticket):
+    def inspect(self, repo, ticket, *, ignored_public_id=None):
         session = repo.session
         public = select(TicketMessage).where(TicketMessage.ticket_id == ticket.id,
                                             TicketMessage.visibility == Visibility.PUBLIC)
+        if ignored_public_id is not None:
+            public = public.where(TicketMessage.id != ignored_public_id)
         replies = list(session.scalars(public.order_by(TicketMessage.created_at.desc(), TicketMessage.id.desc()).limit(2)))
         follow_up = session.scalar(public.where(TicketMessage.author_id == ticket.customer_id)
                                    .with_only_columns(TicketMessage.id).limit(1)) is not None
@@ -86,10 +88,11 @@ class Workflow:
     def status(self, actor, ticket_id, drafts):
         with self.database.transaction(readonly=True) as session:
             repo = TicketRepository(session, actor, UserRole.AGENT)
-            snapshot = self.inspect(repo, repo.ticket(ticket_id))
+            ticket = repo.ticket(ticket_id)
+            snapshot = self.inspect(repo, ticket)
             capacity_block = None
-            if snapshot.decision.eligible and drafts.enabled(ticket_id):
-                capacity_block = drafts.budget_block(session) or drafts.queue_block(session)
+            if snapshot.decision.eligible:
+                capacity_block = drafts.generation_block(repo, ticket, snapshot) or drafts.queue_block(session)
         decision, evidence_count = snapshot.decision, None
         if decision.eligible:
             synthetic = ticket_id == drafts.synthetic_ticket
@@ -100,8 +103,8 @@ class Workflow:
             evidence_count = len({item.chunk_id for _, item in usable.values()})
             if not evidence_count:
                 decision = Decision(DecisionCode.INSUFFICIENT_EVIDENCE, "NO_SAFE_EVIDENCE")
-            elif not drafts.enabled(ticket_id) or capacity_block:
-                decision = Decision(DecisionCode.GENERATION_UNAVAILABLE, capacity_block or "PROVIDER_DISABLED")
+            elif capacity_block:
+                decision = Decision(DecisionCode.GENERATION_UNAVAILABLE, capacity_block)
         return WorkflowStatus(ticket_id=ticket_id, decision=decision.code, reason=decision.reason,
                               explanation=decision.message, risk=decision.risk, intent=snapshot.intent,
                               classification_run_id=snapshot.classification_id, evidence_count=evidence_count)
@@ -109,9 +112,10 @@ class Workflow:
     def synthetic_send_allowed(self, repo, ticket):
         if not self.synthetic_customer_uid:
             return False
-        return repo.session.scalar(select(User.id).where(User.id == ticket.customer_id,
+        query = select(User.id).where(User.id == ticket.customer_id,
             User.firebase_uid == self.synthetic_customer_uid, User.role == UserRole.CUSTOMER,
-            User.is_active.is_(True)).with_for_update(read=True)) == ticket.customer_id
+            User.is_active.is_(True))
+        return repo.session.scalar(query.with_for_update(read=True) if repo.write else query) == ticket.customer_id
 
     @staticmethod
     def audit(repo, ticket, snapshot, decision=None):

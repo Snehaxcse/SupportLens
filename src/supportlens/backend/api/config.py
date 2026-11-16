@@ -7,9 +7,13 @@ from uuid import UUID
 from pydantic import Field, SecretStr, ValidationError, field_validator
 
 from ..config import ConfigurationError, Settings
+from ..response_cache.matching import MIN_SIMILARITY
 
 
 class APISettings(Settings):
+    response_cache_enabled: bool = False
+    response_cache_min_similarity: float = Field(default=MIN_SIMILARITY, ge=MIN_SIMILARITY, le=1, allow_inf_nan=False)
+    response_cache_ttl_days: int = Field(default=7, ge=1, le=30)
     workflow_min_confidence: float = Field(default=0.7, ge=0, le=1, allow_inf_nan=False)
     workflow_draft_queue_limit: int = Field(default=32, ge=1, le=100)
     workflow_synthetic_customer_uid: str | None = Field(default=None, max_length=128, repr=False, exclude=True)

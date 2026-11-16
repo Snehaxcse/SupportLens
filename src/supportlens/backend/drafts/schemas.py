@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 
 from ..knowledge.schemas import Evidence, Input
+from ..response_cache.schemas import CacheOrigin, CacheSummary
 from ..tickets.schemas import AgentMessage
 
 
@@ -61,6 +62,9 @@ class DraftRun(BaseModel):
     reviewed_at: datetime | None
     send_candidate: bool = False
     sent_message_id: UUID | None = None
+    cache_origin: CacheOrigin | None = None
+    cache_lookup: Literal["HIT", "MISS"] | None = None
+    reuse_approval: CacheSummary | None = None
 
 
 class DraftList(BaseModel):
@@ -69,3 +73,4 @@ class DraftList(BaseModel):
     total: int
     page: int
     items: list[DraftRun]
+    reuse_enabled: bool | None = None

@@ -21,6 +21,8 @@ const labels: Record<Run["state"], string> = {
 };
 
 const failures: Record<string, string> = {
+  CACHE_MISS_BUSY:
+    "A similar issue is generating a draft. Try again later or reply manually.",
   INSUFFICIENT_EVIDENCE: "No usable published evidence supports a draft.",
   EVIDENCE_CHANGED:
     "The evidence changed. Refresh or regenerate with current sources.",
@@ -59,6 +61,8 @@ const policyLabels: Record<Schemas["WorkflowStatus"]["decision"], string> = {
 };
 
 function DraftContent({ run }: { run: Run }) {
+  const reuse = run.reuse_approval;
+  const origin = run.cache_origin;
   return (
     <>
       {run.synthetic && (
@@ -69,6 +73,28 @@ function DraftContent({ run }: { run: Run }) {
       <p role="status" className="knowledge-status">
         {run.sent_message_id ? "Public reply sent" : labels[run.state]}
       </p>
+      {origin ? (
+        <p className="field-help">
+          Draft source: semantic cache ·{" "}
+          {origin.status?.toLowerCase() ?? "status unavailable"} · Expires{" "}
+          {new Date(origin.expires_at).toLocaleString()}
+        </p>
+      ) : run.text && run.provider_calls > 0 ? (
+        <p className="field-help">
+          Draft source: Gemini
+          {run.cache_lookup === "MISS" ? " · Cache miss" : ""}
+        </p>
+      ) : run.cache_lookup === "MISS" ? (
+        <p className="field-help">Cache miss</p>
+      ) : null}
+      {reuse && (
+        <p className="field-help">
+          Reuse approval: {reuse.status.toLowerCase()} · Expires{" "}
+          {new Date(reuse.expires_at).toLocaleString()}
+          {reuse.reason === "EVIDENCE_CHANGED" && " · Evidence changed"}
+          {reuse.reason === "REVOKED" && " · Revoked by an agent"}
+        </p>
+      )}
       {run.failure && (
         <p className="field-help">
           {failures[run.failure] ??
@@ -97,9 +123,11 @@ function DraftContent({ run }: { run: Run }) {
           </ul>
         </details>
       )}
-      <p className="field-help">
-        {run.model} · {run.prompt_version}
-      </p>
+      {!origin && (
+        <p className="field-help">
+          {run.model} · {run.prompt_version}
+        </p>
+      )}
     </>
   );
 }
@@ -208,6 +236,7 @@ function DraftControls({
       !current ||
       !current.send_candidate ||
       !current.text ||
+      (current.cache_origin && current.cache_origin.status !== "ACTIVE") ||
       !policyAllowsSend ||
       resource.loading ||
       resource.error
@@ -226,6 +255,33 @@ function DraftControls({
     resource.reload();
     policy.reload();
     onSent();
+    return true;
+  }
+
+  async function changeReuse() {
+    if (!current || current.state !== "APPROVED" || current.cache_origin)
+      return false;
+    const existing = current.reuse_approval;
+    const approval = await mutation.run(() =>
+      existing
+        ? api.revokeReuse(ticketId, current.id, existing.id, {
+            request_id: requestId(`revoke:${existing.id}:${existing.version}`),
+            expected_version: existing.version,
+          })
+        : api.approveReuse(ticketId, current.id, {
+            request_id: requestId(`reuse:${current.id}:${current.version}`),
+            expected_draft_version: current.version,
+            confirm_general_reuse: true,
+          }),
+    );
+    if (!approval) return false;
+    activation.current = undefined;
+    announce(
+      existing
+        ? "Reuse approval revoked."
+        : "General guidance approved for reuse.",
+    );
+    resource.reload();
     return true;
   }
 
@@ -336,11 +392,45 @@ function DraftControls({
           </div>
         ))}
       <div className="knowledge-actions">
+        {data?.reuse_enabled &&
+          current?.state === "APPROVED" &&
+          !current.cache_origin &&
+          (current.reuse_approval?.status === "ACTIVE" ? (
+            <ConfirmAction
+              label="Revoke reuse"
+              title="Revoke cross-ticket reuse?"
+              disabled={disabled}
+              onConfirm={changeReuse}
+            >
+              Future drafts cannot reuse this approval. Pending cached drafts
+              need a fresh source.
+            </ConfirmAction>
+          ) : (
+            !current.reuse_approval && (
+              <ConfirmAction
+                label="Approve for reuse"
+                title="Allow this guidance on similar tickets?"
+                disabled={disabled}
+                onConfirm={changeReuse}
+              >
+                Confirm that the approved text is general guidance, contains no
+                personal details, and is safe for other customers. Each new
+                ticket still requires a separate review and send.
+              </ConfirmAction>
+            )
+          ))}
         {current?.send_candidate && current.text && (
           <ConfirmAction
             label="Send public reply"
             title="Send this approved reply to the customer?"
-            disabled={disabled || !policyAllowsSend}
+            disabled={
+              disabled ||
+              !policyAllowsSend ||
+              Boolean(
+                current.cache_origin &&
+                current.cache_origin.status !== "ACTIVE",
+              )
+            }
             onConfirm={send}
           >
             The following message will be visible to the customer.

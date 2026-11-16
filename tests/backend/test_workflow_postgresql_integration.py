@@ -32,6 +32,7 @@ from supportlens.backend.knowledge.schemas import ArticleEdit, ArticleInput, Lif
 from supportlens.backend.tickets.schemas import TicketCreate
 from supportlens.backend.tickets.service import TicketService
 from supportlens.backend.workflow.service import Workflow
+from tests.backend.test_drafts_postgresql_integration import retained_reservations
 from tests.backend.test_tickets_postgresql_integration import synthetic_user, ticket_database, ticket_http
 
 pytestmark = [pytest.mark.db_integration, pytest.mark.skipif(
@@ -50,6 +51,7 @@ class Scenario:
     def __init__(self, ticket_http, *, provider_result=None):
         self.client = TestClient(ticket_http.app)
         self.runtime = ticket_http.app.state.runtime
+        self.daily_limit = retained_reservations(self.runtime.database) + 4
         self.actors = ticket_http.actors
         self.agent = ticket_http.headers("agent")
         self.owner = ticket_http.headers("owner")
@@ -77,7 +79,7 @@ class Scenario:
         assert result.status_code == 201
         identifier = UUID(result.json()["id"])
         self.runtime.drafts = DraftService(self.runtime.database, self.provider, synthetic_ticket=identifier,
-                                           workflow=self.runtime.workflow, daily_limit=4)
+                                           workflow=self.runtime.workflow, daily_limit=self.daily_limit)
         self.worker = DraftProcessor(self.runtime.drafts, self.runtime.retrieval)
         self.path = f"/api/v1/agent/tickets/{identifier}"
         self.customer_path = f"/api/v1/tickets/{identifier}"

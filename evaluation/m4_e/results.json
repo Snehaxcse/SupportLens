@@ -1,0 +1,255 @@
+{
+  "embedding_model": "minilm-l6-v2:1110a243fdf4706b3f48f1d95db1a4f5529b4d41:avx2-single-mean-l2-v1",
+  "matching_version": "response-cache:en:1",
+  "threshold": 0.9,
+  "distinct_fixtures": 23,
+  "parallel_queries": 6,
+  "queries": 29,
+  "expected_safe_hits": 11,
+  "hits": 10,
+  "false_hits": 0,
+  "false_misses": 1,
+  "hit_rate": 0.3448275862068966,
+  "accepted_precision": 1.0,
+  "false_hit_rate": 0.0,
+  "false_miss_rate": 0.09090909090909091,
+  "generation_bypasses_simulated": 10,
+  "gemini_requests_made": 0,
+  "actual_token_savings": null,
+  "outcomes": [
+    {
+      "id": "playback-paraphrase",
+      "expected_safe_hit": true,
+      "hit": true,
+      "reason": "HIT",
+      "cosine": 0.96387,
+      "latency_ms": 156.644
+    },
+    {
+      "id": "track-skips",
+      "expected_safe_hit": true,
+      "hit": true,
+      "reason": "HIT",
+      "cosine": 0.9307,
+      "latency_ms": 145.94
+    },
+    {
+      "id": "launch-paraphrase",
+      "expected_safe_hit": true,
+      "hit": true,
+      "reason": "HIT",
+      "cosine": 0.90786,
+      "latency_ms": 166.75
+    },
+    {
+      "id": "playlist-paraphrase",
+      "expected_safe_hit": true,
+      "hit": true,
+      "reason": "HIT",
+      "cosine": 0.99081,
+      "latency_ms": 192.921
+    },
+    {
+      "id": "unsupported-synonym",
+      "expected_safe_hit": true,
+      "hit": false,
+      "reason": "UNSUPPORTED_CONTEXT",
+      "cosine": null,
+      "latency_ms": 0.186
+    },
+    {
+      "id": "different-required-fix",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "UNSUPPORTED_CONTEXT",
+      "cosine": null,
+      "latency_ms": 0.081
+    },
+    {
+      "id": "different-issue-same-intent",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "INCOMPATIBLE_CONTEXT",
+      "cosine": null,
+      "latency_ms": 0.182
+    },
+    {
+      "id": "different-intent-shared-words",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "UNSUPPORTED_CONTEXT",
+      "cosine": null,
+      "latency_ms": 0.135
+    },
+    {
+      "id": "account-security",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "SENSITIVE_CASE",
+      "cosine": null,
+      "latency_ms": 0.037
+    },
+    {
+      "id": "account-access",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "SENSITIVE_CASE",
+      "cosine": null,
+      "latency_ms": 0.039
+    },
+    {
+      "id": "billing",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "SENSITIVE_CASE",
+      "cosine": null,
+      "latency_ms": 0.025
+    },
+    {
+      "id": "identifying-detail",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "UNSUPPORTED_CONTEXT",
+      "cosine": null,
+      "latency_ms": 0.055
+    },
+    {
+      "id": "unsupported-volume",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "UNSUPPORTED_CONTEXT",
+      "cosine": null,
+      "latency_ms": 0.161
+    },
+    {
+      "id": "negation",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "UNSUPPORTED_CONTEXT",
+      "cosine": null,
+      "latency_ms": 0.057
+    },
+    {
+      "id": "injection",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "PROMPT_INJECTION",
+      "cosine": null,
+      "latency_ms": 0.023
+    },
+    {
+      "id": "changed-revision",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "NO_MATCH",
+      "cosine": 1.0,
+      "latency_ms": 147.213
+    },
+    {
+      "id": "revoked",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "INVALIDATED",
+      "cosine": 1.0,
+      "latency_ms": 154.895
+    },
+    {
+      "id": "expired",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "EXPIRED",
+      "cosine": 1.0,
+      "latency_ms": 137.954
+    },
+    {
+      "id": "wrong-model",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "INCOMPATIBLE",
+      "cosine": 1.0,
+      "latency_ms": 141.785
+    },
+    {
+      "id": "approved-ticket-only",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "UNAPPROVED",
+      "cosine": 1.0,
+      "latency_ms": 140.789
+    },
+    {
+      "id": "poisoned-evidence",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "NO_MATCH",
+      "cosine": 1.0,
+      "latency_ms": 136.403
+    },
+    {
+      "id": "conflicting-guidance",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "AMBIGUOUS",
+      "cosine": 1.0,
+      "latency_ms": 155.041
+    },
+    {
+      "id": "uncertain-classification",
+      "expected_safe_hit": false,
+      "hit": false,
+      "reason": "LOW_CONFIDENCE",
+      "cosine": null,
+      "latency_ms": 0.077
+    },
+    {
+      "id": "parallel-equivalent-1",
+      "expected_safe_hit": true,
+      "hit": true,
+      "reason": "HIT",
+      "cosine": 0.96387,
+      "latency_ms": 138.139
+    },
+    {
+      "id": "parallel-equivalent-2",
+      "expected_safe_hit": true,
+      "hit": true,
+      "reason": "HIT",
+      "cosine": 0.96387,
+      "latency_ms": 271.084
+    },
+    {
+      "id": "parallel-equivalent-3",
+      "expected_safe_hit": true,
+      "hit": true,
+      "reason": "HIT",
+      "cosine": 0.96387,
+      "latency_ms": 410.113
+    },
+    {
+      "id": "parallel-equivalent-4",
+      "expected_safe_hit": true,
+      "hit": true,
+      "reason": "HIT",
+      "cosine": 0.96387,
+      "latency_ms": 413.29
+    },
+    {
+      "id": "parallel-equivalent-5",
+      "expected_safe_hit": true,
+      "hit": true,
+      "reason": "HIT",
+      "cosine": 0.96387,
+      "latency_ms": 453.26
+    },
+    {
+      "id": "parallel-equivalent-6",
+      "expected_safe_hit": true,
+      "hit": true,
+      "reason": "HIT",
+      "cosine": 0.96387,
+      "latency_ms": 470.76
+    }
+  ],
+  "hit_median_local_latency_ms": 232.002,
+  "miss_median_local_latency_ms": 0.161
+}

@@ -28,6 +28,12 @@ pytestmark = [
 ]
 
 
+def retained_reservations(database):
+    with database.transaction(readonly=True) as session:
+        _, count, _ = DraftService._budget(session, session.scalar(select(func.clock_timestamp())))
+    return count
+
+
 def test_live_draft_decisions_citations_quota_and_customer_boundary(ticket_http):
     client = TestClient(ticket_http.app)
     agent = ticket_http.headers("agent")
@@ -58,7 +64,9 @@ def test_live_draft_decisions_citations_quota_and_customer_boundary(ticket_http)
         calls.append(True)
         return ProviderResult(output='{"disposition":"draft","sentence_ids":["e1s1"]}', usage={"promptTokenCount": 45})
     provider = SimpleNamespace(model="gemini-3.1-flash-lite", available=True, generate=generate)
-    runtime.drafts = DraftService(runtime.database, provider, daily_limit=1, synthetic_ticket=identity)
+    # Retained race fixtures share this test database and the same Pacific-day budget.
+    runtime.drafts = DraftService(runtime.database, provider, daily_limit=retained_reservations(runtime.database) + 1,
+                                  synthetic_ticket=identity)
     worker = DraftProcessor(runtime.drafts, RetrievalService(runtime.database, embedder, allow_synthetic=True))
     with runtime.database.transaction() as session:
         session.add(TicketMessage(ticket_id=identity, author_id=actor.id, visibility="INTERNAL", body="INTERNAL_SENTINEL"))

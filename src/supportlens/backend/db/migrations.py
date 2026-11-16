@@ -6,6 +6,7 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import CheckConstraint, MetaData, inspect, text
 
 from ..config import ConfigurationError, Environment, Settings
@@ -19,6 +20,8 @@ from .session import build_engine
 
 REVISION = "20261027_0001"
 KNOWLEDGE_REVISION = "20261114_0002"
+CACHE_REVISION = "20261116_0003"
+CACHE_TABLES = frozenset({"response_cache_entries", "response_cache_evidence"})
 FOUNDATION_TABLES = frozenset({"users", "tickets", "ticket_messages", "ticket_events",
                               "ai_runs", "knowledge_articles", "knowledge_citations"})
 
@@ -27,6 +30,14 @@ def foundation_metadata():
     metadata = MetaData(naming_convention=Base.metadata.naming_convention)
     for name in sorted(FOUNDATION_TABLES):
         Base.metadata.tables[name].to_metadata(metadata)
+    return metadata
+
+
+def knowledge_metadata():
+    metadata = MetaData(naming_convention=Base.metadata.naming_convention)
+    for name, table in Base.metadata.tables.items():
+        if name not in CACHE_TABLES:
+            table.to_metadata(metadata)
     return metadata
 
 
@@ -40,12 +51,14 @@ def include_application_object_name(name, type_, parent_names):
 
 def verify_schema(connection, *, required_revision=None) -> dict:
     from ..knowledge import models as knowledge_models  # register additive tables
+    from ..response_cache import models as cache_models
 
     context = MigrationContext.configure(connection, opts={"compare_type": True, "compare_server_default": True, "version_table_schema": "public", "include_name": include_application_object_name})
     current_revision = context.get_current_revision()
-    if current_revision not in {REVISION, KNOWLEDGE_REVISION} or (required_revision and current_revision != required_revision):
+    if current_revision not in {REVISION, KNOWLEDGE_REVISION, CACHE_REVISION} or (required_revision and current_revision != required_revision):
         raise PreflightBlocked("The expected SupportLens migration revision is not installed.")
-    metadata = Base.metadata if current_revision == KNOWLEDGE_REVISION else foundation_metadata()
+    metadata = ({REVISION: foundation_metadata, KNOWLEDGE_REVISION: knowledge_metadata,
+                 CACHE_REVISION: lambda: Base.metadata}[current_revision])()
     difference_count = len(compare_metadata(context, metadata))
     trigger_rows = list(connection.execute(text("""
         SELECT t.tgname, c.relname, p.proname, t.tgtype, t.tgenabled FROM pg_trigger t
@@ -65,17 +78,25 @@ def verify_schema(connection, *, required_revision=None) -> dict:
         name = re.search(r"CREATE FUNCTION public\.(\w+)", ddl)
         if name:
             expected_functions[name.group(1)] = ddl.split("AS $$", 1)[1].rsplit("$$", 1)[0].strip()
-    if current_revision == KNOWLEDGE_REVISION:
+    revisions = []
+    if current_revision in {KNOWLEDGE_REVISION, CACHE_REVISION}:
         expected_bindings.update({
             ("supportlens_knowledge_event_append_only", "knowledge_entry_events", "supportlens_audit_append_only", 27, "O"),
             ("supportlens_knowledge_chunk_append_only", "knowledge_chunks", "supportlens_audit_append_only", 27, "O"),
             ("supportlens_knowledge_embedding_append_only", "knowledge_embeddings", "supportlens_audit_append_only", 27, "O"),
             ("supportlens_knowledge_provenance_guard", "knowledge_revisions", "supportlens_guard_knowledge_provenance", 27, "O"),
         })
+        revisions.append(KNOWLEDGE_REVISION)
+    if current_revision == CACHE_REVISION:
+        expected_bindings.update({
+            ("supportlens_response_cache_guard", "response_cache_entries", "supportlens_guard_response_cache", 27, "O"),
+            ("supportlens_response_cache_evidence_guard", "response_cache_evidence", "supportlens_audit_append_only", 27, "O"),
+            ("supportlens_response_cache_invalidate", "knowledge_entries", "supportlens_invalidate_response_cache", 17, "O"),
+        })
+        revisions.append(CACHE_REVISION)
+    for revision in revisions:
         root = Path(__file__).resolve().parents[4]
-        revision = Config(str(root / "alembic.ini"))
-        from alembic.script import ScriptDirectory
-        migration = ScriptDirectory.from_config(revision).get_revision(KNOWLEDGE_REVISION).module
+        migration = ScriptDirectory.from_config(Config(str(root / "alembic.ini"))).get_revision(revision).module
         for ddl in migration.DDL:
             name = re.search(r"CREATE FUNCTION public\.(\w+)", ddl)
             if name:
@@ -143,6 +164,14 @@ def verify_databases(settings: Settings) -> dict:
 
 
 def migrate_knowledge(settings: Settings, target: Environment, project_root: Path) -> dict:
+    return migrate_additive(settings, target, project_root, REVISION, KNOWLEDGE_REVISION, "m4b-knowledge-upgrade")
+
+
+def migrate_cache(settings: Settings, target: Environment, project_root: Path) -> dict:
+    return migrate_additive(settings, target, project_root, KNOWLEDGE_REVISION, CACHE_REVISION, "m4e-cache-upgrade")
+
+
+def migrate_additive(settings, target, project_root, predecessor, revision, operation):
     spec = settings.spec(target, migration=True)
     identities = preflight(settings)
     engine = build_engine(settings, target, migration=True)
@@ -151,17 +180,19 @@ def migrate_knowledge(settings: Settings, target: Environment, project_root: Pat
             direct = inspect_connection(connection, spec, require_readonly=False)
             if direct.database_oid != identities[target].database_oid:
                 raise PreflightBlocked("Direct and application database identities differ.")
-            connection.execute(text("SELECT pg_advisory_xact_lock(hashtext('supportlens_m4b_knowledge'))"))
+            connection.execute(text("SELECT pg_advisory_xact_lock(hashtext('supportlens_additive_migration'))"))
             before = verify_schema(connection)
-            if before["revision"] == KNOWLEDGE_REVISION:
+            if before["revision"] in {revision, CACHE_REVISION}:
                 return {"migration_applied": False, **before}
+            if before["revision"] != predecessor:
+                raise PreflightBlocked("The additive migration prerequisite is not installed.")
             cfg = Config(str(project_root / "alembic.ini"))
-            cfg.attributes.update(verified_connection=connection, operation="m4b-knowledge-upgrade")
-            command.upgrade(cfg, KNOWLEDGE_REVISION)
-            return {"migration_applied": True, **verify_schema(connection, required_revision=KNOWLEDGE_REVISION)}
+            cfg.attributes.update(verified_connection=connection, operation=operation)
+            command.upgrade(cfg, revision)
+            return {"migration_applied": True, **verify_schema(connection, required_revision=revision)}
     except ConfigurationError:
         raise
     except Exception:
-        raise PreflightBlocked("Knowledge migration failed and was rolled back. Driver details are suppressed.") from None
+        raise PreflightBlocked("The additive migration failed and rolled back. Driver details are suppressed.") from None
     finally:
         engine.dispose()

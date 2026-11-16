@@ -57,6 +57,7 @@ test("agent can edit and approve evidence draft without sending a reply", async 
           total: draft ? 1 : 0,
           page: 1,
           generation_enabled: true,
+          reuse_enabled: true,
         });
       }
       const body = request.postDataJSON();
@@ -107,6 +108,37 @@ test("agent can edit and approve evidence draft without sending a reply", async 
         };
         return send(draft, 202);
       }
+      if (request.url().endsWith("/reuse")) {
+        expect(body).toEqual({
+          request_id: expect.any(String),
+          expected_draft_version: 3,
+          confirm_general_reuse: true,
+        });
+        const reuse: Schemas["CacheSummary"] = {
+          id: uuid(8300),
+          version: 1,
+          status: "ACTIVE",
+          reason: null,
+          expires_at: "2026-11-23T00:00:00.000Z",
+          hit_count: 0,
+        };
+        draft = { ...draft, reuse_approval: reuse };
+        return send(reuse);
+      }
+      if (request.url().endsWith("/revoke") && draft.reuse_approval) {
+        expect(body).toEqual({
+          request_id: expect.any(String),
+          expected_version: 1,
+        });
+        const reuse: Schemas["CacheSummary"] = {
+          ...draft.reuse_approval,
+          status: "INVALIDATED",
+          reason: "REVOKED",
+          version: 2,
+        };
+        draft = { ...draft, reuse_approval: reuse };
+        return send(reuse);
+      }
       expect(body.expected_version).toBe(draft.version);
       if (request.url().endsWith("/send")) {
         expect(body).toEqual({
@@ -145,6 +177,9 @@ test("agent can edit and approve evidence draft without sending a reply", async 
     .getByRole("button", { name: "Generate draft", exact: true })
     .press("Enter");
   await expect(panel.getByText("Ready for review")).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Approve for reuse" }),
+  ).toHaveCount(0);
   await panel.getByText("Evidence (1)", { exact: true }).click();
   await expect(
     panel.getByRole("link", { name: "Fictional playback trace" }),
@@ -163,6 +198,17 @@ test("agent can edit and approve evidence draft without sending a reply", async 
     .click();
   await expect(panel.getByText("Approved for agent reference")).toBeVisible();
   expect(reviewCount).toBe(2);
+  expect(sendCount).toBe(0);
+  await panel
+    .getByRole("button", { name: "Approve for reuse", exact: true })
+    .click();
+  await page
+    .getByRole("alertdialog", {
+      name: "Allow this guidance on similar tickets?",
+    })
+    .getByRole("button", { name: "Approve for reuse", exact: true })
+    .click();
+  await expect(panel.getByText(/Reuse approval: active/)).toBeVisible();
   expect(sendCount).toBe(0);
   expect(
     state.requests.filter(
@@ -191,6 +237,14 @@ test("agent can edit and approve evidence draft without sending a reply", async 
     panel.getByText("Public reply sent", { exact: true }),
   ).toBeVisible();
   expect(sendCount).toBe(1);
+  await panel
+    .getByRole("button", { name: "Revoke reuse", exact: true })
+    .click();
+  await page
+    .getByRole("alertdialog", { name: "Revoke cross-ticket reuse?" })
+    .getByRole("button", { name: "Revoke reuse", exact: true })
+    .click();
+  await expect(panel.getByText(/Revoked by an agent/)).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -217,6 +271,84 @@ test("customer ticket never loads draft content or controls", async ({
   ).toBeVisible();
   await expect(page.getByRole("region", { name: "AI draft" })).toHaveCount(0);
   expect(
-    state.requests.some((row) => /\/(drafts|workflow)(\/|$)/.test(row.path)),
+    state.requests.some((row) =>
+      /\/(drafts|workflow|response-cache)(\/|$)/.test(row.path),
+    ),
   ).toBe(false);
+});
+
+test("cache-derived draft shows provenance and disables a revoked send", async ({
+  page,
+}) => {
+  const state = stateFor("AGENT");
+  await mockServices(page, state);
+  const id = uuid(1);
+  const root = `http://127.0.0.1:8900/api/v1/agent/tickets/${id}`;
+  const headers = {
+    "Access-Control-Allow-Origin": "http://127.0.0.1:3100",
+    "Access-Control-Allow-Headers": "Authorization",
+  };
+  let current: "ACTIVE" | "INVALIDATED" = "ACTIVE";
+  await page.route(`${root}/workflow`, (route) =>
+    route.fulfill({
+      headers,
+      json: {
+        ticket_id: id,
+        decision: "AI_DRAFT_ELIGIBLE",
+        reason: "ELIGIBLE",
+        explanation: "General playback guidance.",
+        evidence_count: 1,
+        requires_agent_review: true,
+      },
+    }),
+  );
+  await page.route(new RegExp(`${root}/drafts(?:\\?|$)`), (route) =>
+    route.fulfill({
+      headers,
+      json: {
+        ticket_id: id,
+        total: 1,
+        page: 1,
+        generation_enabled: true,
+        reuse_enabled: true,
+        items: [
+          {
+            ticket_id: id,
+            id: uuid(8350),
+            state: "APPROVED",
+            version: 2,
+            evidence: [],
+            text: "Thanks for reaching out.\nThe fictional trace records the playback pause.",
+            send_candidate: true,
+            cache_lookup: "HIT",
+            cache_origin: {
+              id: uuid(8300),
+              version: 1,
+              status: current,
+              expires_at: "2026-11-23T00:00:00.000Z",
+            },
+          },
+        ],
+      },
+    }),
+  );
+  await signIn(page);
+  await page.goto(`/agent/tickets/${id}`);
+  const panel = page.getByRole("region", { name: "AI draft" });
+  await panel.getByRole("button", { name: "Open AI drafts" }).click();
+  await expect(
+    panel.getByText(/Draft source: semantic cache · active/),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Approve for reuse" }),
+  ).toHaveCount(0);
+  await expect(
+    panel.getByRole("button", { name: "Send public reply" }),
+  ).toBeEnabled();
+  current = "INVALIDATED";
+  await panel.getByRole("button", { name: "Refresh AI workflow" }).click();
+  await expect(panel.getByText(/semantic cache · invalidated/)).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Send public reply" }),
+  ).toBeDisabled();
 });

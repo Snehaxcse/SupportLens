@@ -34,6 +34,9 @@ from ..drafts.routes import router as draft_router
 from ..drafts.service import DraftService
 from ..drafts.worker import DraftProcessor
 from ..workflow.service import Workflow
+from ..response_cache.routes import router as cache_router
+from ..response_cache.service import ResponseCache
+from ..db.migrations import CACHE_REVISION
 from ..config import Environment
 from .config import load_api_settings
 from .database import Database
@@ -110,6 +113,10 @@ def create_app(settings=None, *, runtime=None):
         runtime.workflow = Workflow(runtime.database, runtime.classifications, runtime.retrieval,
                                     threshold=settings.workflow_min_confidence,
                                     synthetic_customer_uid=settings.workflow_synthetic_customer_uid)
+    if not hasattr(runtime, "response_cache"):
+        runtime.response_cache = ResponseCache(runtime.database, embedder, enabled=settings.response_cache_enabled,
+                                               threshold=settings.response_cache_min_similarity,
+                                               ttl_days=settings.response_cache_ttl_days)
     if not hasattr(runtime, "drafts"):
         provider = Gemini(settings)
         # The opt-in PostgreSQL test process must never make real API calls.
@@ -118,7 +125,8 @@ def create_app(settings=None, *, runtime=None):
         runtime.drafts = DraftService(runtime.database, provider, daily_limit=settings.gemini_daily_limit,
                                       synthetic_ticket=settings.gemini_synthetic_ticket_id,
                                       allow_reviewed=settings.gemini_allow_reviewed_context,
-                                      workflow=runtime.workflow, queue_limit=settings.workflow_draft_queue_limit)
+                                      workflow=runtime.workflow, queue_limit=settings.workflow_draft_queue_limit,
+                                      cache=runtime.response_cache)
         if owned_runtime and settings.firebase_project_id:
             runtime.draft_worker = IndexWorker(DraftProcessor(runtime.drafts, runtime.retrieval),
                                                settings.draft_poll_seconds, name="draft", delay_event="draft_worker_delay")
@@ -184,7 +192,10 @@ def create_app(settings=None, *, runtime=None):
     def ready():
         try:
             runtime.verifier.ready()
-            runtime.database.ready()
+            if owned_runtime and runtime.response_cache.enabled:
+                runtime.database.ready(required_revision=CACHE_REVISION)
+            else:
+                runtime.database.ready()
         except Exception:
             raise APIError(503, "not_ready", "Required dependencies are not ready.") from None
         return {"status": "ready"}
@@ -201,4 +212,5 @@ def create_app(settings=None, *, runtime=None):
     app.include_router(classification_router)
     app.include_router(knowledge_router)
     app.include_router(draft_router)
+    app.include_router(cache_router)
     return app

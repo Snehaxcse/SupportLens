@@ -14,6 +14,7 @@ from ..domain.enums import AIRunStatus, TicketEventType, UserRole, Visibility
 from ..knowledge.models import KnowledgeChunk, KnowledgeEntry
 from ..knowledge.retrieval import evidence_rows
 from ..knowledge.schemas import Evidence, RetrievalOptions
+from ..response_cache.models import ResponseCacheEntry
 from ..tickets.schemas import AgentMessageCreate, TicketAction
 from ..tickets.service import TicketRepository
 from ..workflow.policy import Decision, DecisionCode
@@ -45,10 +46,11 @@ def order(query):
     return query.order_by(AIRun.score_metadata["sequence"].as_integer().desc(), AIRun.id)
 
 
-def view(row):
+def view(row, *, reuse=None, origin_status=None):
     meta = row.score_metadata
     sent = meta.get("send")
     attempts = meta["attempts"]
+    origin = meta.get("cache_origin")
     usage = {}
     for attempt in attempts:
         for key, value in attempt.get("usage", {}).items():
@@ -63,7 +65,9 @@ def view(row):
                     version=meta["version"], created_at=row.created_at, completed_at=meta.get("completed_at"),
                     reviewed_by=meta.get("reviewed_by"), reviewed_at=meta.get("reviewed_at"),
                     send_candidate=bool(meta.get("workflow") and meta.get("decision") == "APPROVED" and not sent),
-                    sent_message_id=sent["message_id"] if sent else None)
+                    sent_message_id=sent["message_id"] if sent else None,
+                    cache_origin=origin | {"status": origin_status} if origin else None,
+                    cache_lookup=meta.get("cache_lookup", {}).get("status"), reuse_approval=reuse)
 
 
 def event(session, row, actor, action, now):
@@ -90,18 +94,29 @@ def evidence_current(session, evidence, synthetic):
 
 class DraftService:
     def __init__(self, database, provider, *, daily_limit=8, synthetic_ticket=None, allow_reviewed=False,
-                 workflow=None, queue_limit=32):
+                 workflow=None, queue_limit=32, cache=None):
         self.database, self.provider = database, provider
         self.daily_limit = daily_limit
         self.synthetic_ticket = synthetic_ticket
         self.allow_reviewed = allow_reviewed
         self.workflow = workflow
         self.queue_limit = queue_limit
+        self.cache = cache
+
+    def in_scope(self, ticket_id):
+        return ticket_id == self.synthetic_ticket or (self.allow_reviewed and self.synthetic_ticket is None)
 
     def enabled(self, ticket_id):
-        return self.provider.available and self.daily_limit > 0 and (
-            ticket_id == self.synthetic_ticket or (self.allow_reviewed and self.synthetic_ticket is None)
-        )
+        return self.provider.available and self.daily_limit > 0 and self.in_scope(ticket_id)
+
+    def cache_enabled(self, ticket_id):
+        return bool(self.cache and self.cache.enabled and self.workflow and self.in_scope(ticket_id))
+
+    def generation_block(self, repo, ticket, snapshot):
+        reason = self.budget_block(repo.session) if self.enabled(ticket.id) else "PROVIDER_DISABLED"
+        if reason and self.cache_enabled(ticket.id) and self.cache.candidates_exist(repo, ticket, self, snapshot):
+            return None
+        return reason
 
     def listing(self, actor, ticket_id, page=1):
         with self.database.transaction(readonly=True) as session:
@@ -110,8 +125,20 @@ class DraftService:
             query = runs(ticket_id)
             total = session.scalar(select(func.count()).select_from(query.subquery()))
             rows = list(session.scalars(order(query).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE)))
-            return DraftList(ticket_id=ticket_id, generation_enabled=self.enabled(ticket_id),
-                             total=total, page=page, items=[view(row) for row in rows])
+            reuse, origins = {}, {}
+            if self.cache and self.cache.enabled and rows:
+                now = repository.now()
+                ids = [UUID(row.score_metadata["cache_origin"]["id"]) for row in rows if row.score_metadata.get("cache_origin")]
+                entries = session.scalars(select(ResponseCacheEntry).where(or_(
+                    ResponseCacheEntry.source_run_id.in_([row.id for row in rows]), ResponseCacheEntry.id.in_(ids))))
+                for entry in entries:
+                    summary = self.cache.summary(entry, now)
+                    reuse[entry.source_run_id] = summary
+                    origins[str(entry.id)] = summary.status
+            return DraftList(ticket_id=ticket_id, generation_enabled=self.enabled(ticket_id) or self.cache_enabled(ticket_id),
+                total=total, page=page, reuse_enabled=self.cache_enabled(ticket_id),
+                items=[view(row, reuse=reuse.get(row.id),
+                            origin_status=origins.get(row.score_metadata.get("cache_origin", {}).get("id"))) for row in rows])
 
     def enqueue(self, actor, ticket_id, payload):
         with self.database.transaction() as session:
@@ -129,7 +156,7 @@ class DraftService:
         if not decision.eligible:
             self.workflow.audit(repo, ticket, snapshot)
             return APIError(409, "workflow_not_eligible", decision.message)
-        reason = self.budget_block(repo.session) if self.enabled(ticket.id) else "PROVIDER_DISABLED"
+        reason = self.generation_block(repo, ticket, snapshot)
         if not reason:
             repo.session.execute(select(func.pg_advisory_xact_lock(func.hashtextextended("supportlens-draft-queue", 0))))
             reason = self.queue_block(repo.session)
@@ -203,7 +230,7 @@ class DraftService:
                     or any(item.get("outcome") != "PROVIDER_TEMPORARY" for item in meta["attempts"])):
                 self._finish(session, row, now, "FAILED", "INTERRUPTED", {})
                 return True
-            if self.workflow is not None and not self.enabled(row.ticket_id):
+            if self.workflow is not None and not (self.enabled(row.ticket_id) or self.cache_enabled(row.ticket_id)):
                 self._finish(session, row, now, "FAILED", "PROVIDER_DISABLED", {})
                 return True
             token = token_hex(24)
@@ -244,7 +271,7 @@ class DraftService:
         active = session.scalar(select(func.count()).select_from(runs().where(AIRun.status.in_(ACTIVE)).subquery()))
         return "QUEUE_FULL" if active >= self.queue_limit else None
 
-    def reserve(self, lease, evidence):
+    def reserve(self, lease, evidence, *, miss_key=None):
         with self.database.transaction() as session:
             repo = TicketRepository(session, lease_actor(lease), UserRole.AGENT, write=True)
             ticket = repo.ticket(lease.ticket_id) if self.workflow is not None else None
@@ -260,6 +287,10 @@ class DraftService:
             if not evidence_current(session, evidence, lease.synthetic):
                 return "EVIDENCE_CHANGED"
             now = session.scalar(select(func.clock_timestamp()))
+            if miss_key and session.scalar(runs().where(AIRun.id != row.id, AIRun.status == AIRunStatus.RUNNING,
+                    AIRun.score_metadata["cache_miss_key"].astext == miss_key,
+                    AIRun.score_metadata["lease_until"].astext > now.isoformat()).with_only_columns(AIRun.id).limit(1)):
+                return "CACHE_MISS_BUSY"
             pacific_day, count, quota = self._budget(session, now)
             attempts = row.score_metadata["attempts"]
             if quota:
@@ -270,7 +301,7 @@ class DraftService:
                 return "DAILY_LIMIT"
             row.score_metadata = row.score_metadata | {"attempts": [
                 *attempts, {"day": pacific_day, "at": now.isoformat()},
-            ]}
+            ], **({"cache_miss_key": miss_key} if miss_key else {})}
             return None
 
     def record_usage(self, lease, result):
@@ -280,7 +311,8 @@ class DraftService:
                 return False
             attempts = row.score_metadata["attempts"]
             last = attempts[-1] | {"outcome": result.category or "RECEIVED", "usage": result.usage or {},
-                                   "latency_ms": result.latency_ms}
+                                   "latency_ms": result.latency_ms, "external_attempt": result.external_attempt,
+                                   "external_response": result.external_response}
             row.score_metadata = row.score_metadata | {"attempts": [*attempts[:-1], last]}
             return True
 
@@ -298,7 +330,8 @@ class DraftService:
         row.status = AIRunStatus.SUCCEEDED if state == "DRAFT" else AIRunStatus.FAILED
         event(session, row, None, "DRAFT_COMPLETED", now)
 
-    def complete(self, lease, state, failure=None, *, draft=None, evidence=(), retrieval_method=None, issue_hash=None):
+    def complete(self, lease, state, failure=None, *, draft=None, evidence=(), retrieval_method=None, issue_hash=None,
+                 cache_match=None, cache_lookup=None):
         with self.database.transaction() as session:
             if self.workflow is not None:
                 # Match the ticket-then-run order used by approvals and public messages.
@@ -313,12 +346,21 @@ class DraftService:
             row = self._owned(session, lease)
             if row is None:
                 return False
+            origin = None
             if state == "DRAFT":
                 if self.workflow is not None and not self.workflow.inspect(repo, ticket).matches(row.score_metadata.get("workflow")):
                     state, failure, draft, evidence = "ABSTAINED", "POLICY_CHANGED", None, ()
                 elif not evidence_current(session, evidence, lease.synthetic):
                     state, failure, draft, evidence = "ABSTAINED", "EVIDENCE_CHANGED", None, ()
-                else:
+                if state == "DRAFT" and cache_match is not None:
+                    candidate = cache_match.candidate
+                    entry = self.cache.recheck(repo, ticket, self, candidate.id, candidate.version, draft, evidence,
+                                               cache_match.similarity, usage=True)
+                    if entry is None:
+                        return False  # The worker can use the normal guarded fallback for a discarded candidate.
+                    origin = {"id": str(entry.id), "version": entry.version, "expires_at": entry.expires_at.isoformat(),
+                              "similarity": cache_match.similarity}
+                if state == "DRAFT":
                     for item in evidence:
                         session.add(KnowledgeCitation(ai_run_id=row.id, knowledge_article_id=item.revision_id,
                             article_version=item.revision, citation_metadata={
@@ -326,13 +368,17 @@ class DraftService:
                                 "content_hash": item.content_hash, "rank": item.rank,
                             }))
             now = session.scalar(select(func.clock_timestamp()))
+            if cache_match is not None:
+                cache_lookup = cache_match.metadata(used=origin is not None, discarded=origin is None)
             self._finish(session, row, now, state, failure, {
                 "text": draft, "original": draft, "evidence": [item.model_dump(mode="json") for item in evidence],
                 "retrieval_method": retrieval_method, "issue_fingerprint": issue_hash,
                 "validation": "SUPPORTED_EXTRACTIVE" if state == "DRAFT" else state,
                 "safety_classification": "SYNTHETIC" if lease.synthetic else ("GENERAL_REVIEW" if state == "DRAFT" else "MANUAL"),
                 "embedding_model": next((item.embedding_model for item in evidence if item.embedding_model), None),
-                "response_provenance": "GEMINI_EXTRACTIVE_SELECTION" if state == "DRAFT" else None,
+                "response_provenance": ("SEMANTIC_CACHE" if origin else "GEMINI_EXTRACTIVE_SELECTION" if state == "DRAFT" else None),
+                **({"cache_origin": origin} if origin else {}),
+                **({"cache_lookup": cache_lookup} if cache_lookup else {}),
             })
             return True
 
@@ -367,6 +413,7 @@ class DraftService:
                 evidence = [Evidence.model_validate(item) for item in meta["evidence"]]
                 if not evidence_current(session, evidence, meta["synthetic"]):
                     raise APIError(409, "draft_stale_evidence", "Evidence changed. Regenerate with current sources.")
+                self._check_cached(repo, ticket, meta, evidence)
             now = repo.now()
             decision = {"APPROVE": "APPROVED", "REJECT": "REJECTED"}.get(payload.action)
             content = payload.text.strip() if payload.action == "EDIT" else meta["text"]
@@ -412,12 +459,19 @@ class DraftService:
             evidence = [Evidence.model_validate(item) for item in meta["evidence"]]
             if not evidence_current(session, evidence, meta["synthetic"]):
                 raise APIError(409, "draft_stale_evidence", "Evidence changed. Regenerate with current sources.")
+            self._check_cached(repo, ticket, meta, evidence)
             message = repo.message(ticket_id, AgentMessageCreate(body=meta["text"], visibility=Visibility.PUBLIC))
             row.score_metadata = meta | {"send": request | {"message_id": str(message.id),
                                                            "sent_at": message.created_at.isoformat()}}
             repo.event(ticket, TicketEventType.AI_DECISION_RECORDED, TicketAction.DRAFT_SENT, message.created_at,
                        draft_run_id=str(run_id), message_id=str(message.id), approved_version=meta["version"])
             return DraftDelivery(ticket_id=ticket_id, draft_run_id=run_id, message=message)
+
+    def _check_cached(self, repo, ticket, meta, evidence):
+        origin = meta.get("cache_origin")
+        if origin and (not self.cache or not self.cache.recheck(
+                repo, ticket, self, origin["id"], origin["version"], meta["original"], evidence, origin.get("similarity"))):
+            raise APIError(409, "cache_stale", "Reuse approval or its evidence is no longer current. Request a fresh draft.")
 
 
 @dataclass(frozen=True)

@@ -186,9 +186,12 @@ def test_live_ticket_customer_agent_lifecycle_over_local_http(ticket_http):
         assert {p for p in schema["paths"] if p.startswith("/api/v1/agent")
                 and p != "/api/v1/agent/tickets/{ticket_id}/knowledge"
                 and not p.startswith("/api/v1/agent/knowledge")
+                and not p.startswith("/api/v1/agent/response-cache")
                 and p not in {"/api/v1/agent/tickets/{ticket_id}/drafts",
                               "/api/v1/agent/tickets/{ticket_id}/workflow",
                               "/api/v1/agent/tickets/{ticket_id}/drafts/{run_id}/review",
+                              "/api/v1/agent/tickets/{ticket_id}/drafts/{run_id}/reuse",
+                              "/api/v1/agent/tickets/{ticket_id}/drafts/{run_id}/reuse/{cache_id}/revoke",
                               "/api/v1/agent/tickets/{ticket_id}/drafts/{run_id}/send"}} == {
             "/api/v1/agent/tickets", "/api/v1/agent/tickets/{ticket_id}",
             "/api/v1/agent/tickets/{ticket_id}/claim", "/api/v1/agent/tickets/{ticket_id}/assignment",
