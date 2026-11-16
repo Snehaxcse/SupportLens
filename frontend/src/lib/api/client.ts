@@ -73,6 +73,18 @@ export function errorMessage(
       "The source changed. Regenerate using current evidence.",
     draft_invalid_edit: "Keep the opening and the complete evidence lines.",
     draft_review_limit: "Request a new draft to continue reviewing.",
+    workflow_not_eligible:
+      "Drafting is blocked by policy. Refresh the workflow to see why.",
+    workflow_generation_limited:
+      "Generation is temporarily limited. Refresh the workflow or reply manually.",
+    workflow_changed:
+      "The ticket or policy changed. Refresh before continuing.",
+    draft_already_sent:
+      "This draft already has a public reply. Check the conversation.",
+    draft_not_sendable:
+      "Only the current approved draft can be sent. Refresh the workflow.",
+    draft_synthetic_send:
+      "This draft is outside the authorized synthetic send scope.",
   };
   if (messages[code]) return messages[code];
   if (status === 401)
@@ -320,6 +332,15 @@ export class ApiClient {
       throw new ApiError(502, "invalid_projection");
     return data;
   }
+  async workflow(id: string, signal?: AbortSignal) {
+    const data = await this.request<Schemas["WorkflowStatus"]>(
+      `/api/v1/agent/tickets/${encodeURIComponent(id)}/workflow`,
+      { signal },
+    );
+    if (data.ticket_id !== id || data.requires_agent_review !== true)
+      throw new ApiError(502, "invalid_projection");
+    return data;
+  }
   async generateDraft(id: string, body: Schemas["GenerateDraft"]) {
     const data = await this.request<Schemas["DraftRun"]>(
       `/api/v1/agent/tickets/${encodeURIComponent(id)}/drafts`,
@@ -334,6 +355,19 @@ export class ApiClient {
       { method: "POST", body },
     );
     if (data.ticket_id !== id || data.id !== runId)
+      throw new ApiError(502, "invalid_projection");
+    return data;
+  }
+  async sendDraft(id: string, runId: string, body: Schemas["SendDraft"]) {
+    const data = await this.request<Schemas["DraftDelivery"]>(
+      `/api/v1/agent/tickets/${encodeURIComponent(id)}/drafts/${encodeURIComponent(runId)}/send`,
+      { method: "POST", body },
+    );
+    if (
+      data.ticket_id !== id ||
+      data.draft_run_id !== runId ||
+      data.message.visibility !== "PUBLIC"
+    )
       throw new ApiError(502, "invalid_projection");
     return data;
   }

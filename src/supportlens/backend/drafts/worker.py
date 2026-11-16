@@ -67,7 +67,7 @@ class DraftProcessor:
             denial = self.service.reserve(lease, evidence)
             if denial:
                 if denial != "LEASE_LOST":
-                    state = "ABSTAINED" if denial == "EVIDENCE_CHANGED" else "FAILED"
+                    state = "ABSTAINED" if denial in {"EVIDENCE_CHANGED", "POLICY_CHANGED"} else "FAILED"
                     self.service.complete(lease, state, denial, **provenance)
                 return
             response = self.service.provider.generate(prompt(reduced, catalog))

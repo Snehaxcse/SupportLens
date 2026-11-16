@@ -2,9 +2,10 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ..knowledge.schemas import Evidence, Input
+from ..tickets.schemas import AgentMessage
 
 
 class GenerateDraft(Input):
@@ -17,6 +18,25 @@ class ReviewDraft(Input):
     expected_version: int = Field(ge=1, strict=True)
     action: Literal["EDIT", "APPROVE", "REJECT"]
     text: str | None = Field(default=None, min_length=1, max_length=1600)
+
+
+class SendDraft(Input):
+    request_id: UUID
+    expected_version: int = Field(ge=1, strict=True)
+    confirm_public_send: Literal[True]
+
+    @field_validator("confirm_public_send", mode="before")
+    @classmethod
+    def explicit_confirmation(cls, value):
+        if value is not True:
+            raise ValueError("Explicit public send confirmation is required.")
+        return value
+
+
+class DraftDelivery(BaseModel):
+    ticket_id: UUID
+    draft_run_id: UUID
+    message: AgentMessage
 
 
 class DraftRun(BaseModel):
@@ -39,6 +59,8 @@ class DraftRun(BaseModel):
     completed_at: datetime | None
     reviewed_by: UUID | None
     reviewed_at: datetime | None
+    send_candidate: bool = False
+    sent_message_id: UUID | None = None
 
 
 class DraftList(BaseModel):

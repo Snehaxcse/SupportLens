@@ -435,6 +435,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent/tickets/{ticket_id}/workflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workflow Status */
+        get: operations["workflow_status_api_v1_agent_tickets__ticket_id__workflow_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agent/tickets/{ticket_id}/drafts": {
         parameters: {
             query?: never;
@@ -464,6 +481,23 @@ export interface paths {
         put?: never;
         /** Review Draft */
         post: operations["review_draft_api_v1_agent_tickets__ticket_id__drafts__run_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/tickets/{ticket_id}/drafts/{run_id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send Draft */
+        post: operations["send_draft_api_v1_agent_tickets__ticket_id__drafts__run_id__send_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -918,6 +952,25 @@ export interface components {
             /** Resolved At */
             resolved_at: string | null;
         };
+        /**
+         * DecisionCode
+         * @enum {string}
+         */
+        DecisionCode: "AI_DRAFT_ELIGIBLE" | "NEEDS_AGENT" | "INSUFFICIENT_EVIDENCE" | "CLASSIFICATION_PENDING" | "CLASSIFICATION_UNCERTAIN" | "GENERATION_UNAVAILABLE";
+        /** DraftDelivery */
+        DraftDelivery: {
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            /**
+             * Draft Run Id
+             * Format: uuid
+             */
+            draft_run_id: string;
+            message: components["schemas"]["AgentMessage"];
+        };
         /** DraftList */
         DraftList: {
             /**
@@ -988,6 +1041,13 @@ export interface components {
             reviewed_by: string | null;
             /** Reviewed At */
             reviewed_at: string | null;
+            /**
+             * Send Candidate
+             * @default false
+             */
+            send_candidate: boolean;
+            /** Sent Message Id */
+            sent_message_id?: string | null;
         };
         /** EmptyRequest */
         EmptyRequest: Record<string, never>;
@@ -1305,6 +1365,21 @@ export interface components {
              */
             created_at: string;
         };
+        /** SendDraft */
+        SendDraft: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Expected Version */
+            expected_version: number;
+            /**
+             * Confirm Public Send
+             * @constant
+             */
+            confirm_public_send: true;
+        };
         /**
          * SourceType
          * @enum {string}
@@ -1318,7 +1393,7 @@ export interface components {
          * TicketAction
          * @enum {string}
          */
-        TicketAction: "TICKET_CREATED" | "CUSTOMER_REPLY" | "AGENT_REPLY" | "INTERNAL_NOTE" | "ASSIGNMENT_CHANGED" | "STATUS_CHANGED" | "REOPENED" | "PRIORITY_CHANGED" | "CLASSIFICATION_REQUESTED" | "CLASSIFICATION_COMPLETED" | "DRAFT_REQUESTED" | "DRAFT_COMPLETED" | "DRAFT_EDIT" | "DRAFT_APPROVE" | "DRAFT_REJECT" | "LEGACY_EVENT";
+        TicketAction: "TICKET_CREATED" | "CUSTOMER_REPLY" | "AGENT_REPLY" | "INTERNAL_NOTE" | "ASSIGNMENT_CHANGED" | "STATUS_CHANGED" | "REOPENED" | "PRIORITY_CHANGED" | "CLASSIFICATION_REQUESTED" | "CLASSIFICATION_COMPLETED" | "DRAFT_REQUESTED" | "DRAFT_COMPLETED" | "DRAFT_EDIT" | "DRAFT_APPROVE" | "DRAFT_REJECT" | "WORKFLOW_POLICY_EVALUATED" | "DRAFT_SENT" | "LEGACY_EVENT";
         /** TicketCreate */
         TicketCreate: {
             /** Subject */
@@ -1379,6 +1454,35 @@ export interface components {
          * @enum {string}
          */
         Visibility: "PUBLIC" | "INTERNAL";
+        /** WorkflowStatus */
+        WorkflowStatus: {
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            decision: components["schemas"]["DecisionCode"];
+            /** Reason */
+            reason: string;
+            /** Explanation */
+            explanation: string;
+            /**
+             * Risk
+             * @enum {string}
+             */
+            risk: "STANDARD" | "ELEVATED" | "UNASSESSED";
+            intent: components["schemas"]["Intent"] | null;
+            /** Classification Run Id */
+            classification_run_id: string | null;
+            /** Evidence Count */
+            evidence_count: number | null;
+            /**
+             * Requires Agent Review
+             * @default true
+             * @constant
+             */
+            requires_agent_review: true;
+        };
     };
     responses: never;
     parameters: never;
@@ -3195,6 +3299,37 @@ export interface operations {
             };
         };
     };
+    workflow_status_api_v1_agent_tickets__ticket_id__workflow_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_drafts_api_v1_agent_tickets__ticket_id__drafts_get: {
         parameters: {
             query?: {
@@ -3286,6 +3421,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DraftRun"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_draft_api_v1_agent_tickets__ticket_id__drafts__run_id__send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendDraft"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftDelivery"];
                 };
             };
             /** @description Validation Error */

@@ -10,6 +10,9 @@ from ..config import ConfigurationError, Settings
 
 
 class APISettings(Settings):
+    workflow_min_confidence: float = Field(default=0.7, ge=0, le=1, allow_inf_nan=False)
+    workflow_draft_queue_limit: int = Field(default=32, ge=1, le=100)
+    workflow_synthetic_customer_uid: str | None = Field(default=None, max_length=128, repr=False, exclude=True)
     gemini_api_key: SecretStr | None = Field(default=None, repr=False, exclude=True)
     gemini_free_tier_confirmed: bool = False
     gemini_model: str = "gemini-3.1-flash-lite"
@@ -35,7 +38,7 @@ class APISettings(Settings):
     cors_allowed_origins: tuple[str, ...] = ()
 
     @field_validator("firebase_project_id", "google_application_credentials", "gemini_api_key",
-                     "gemini_synthetic_ticket_id", mode="before")
+                     "gemini_synthetic_ticket_id", "workflow_synthetic_customer_uid", mode="before")
     @classmethod
     def empty_optional(cls, value):
         return None if value == "" else value

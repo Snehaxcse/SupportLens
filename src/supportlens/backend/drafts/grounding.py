@@ -62,6 +62,7 @@ def fingerprint(value):
 
 
 def context_policy(context):
+    context = normalize(context)
     if INJECTION.search(context):
         return "PROMPT_INJECTION"
     if SENSITIVE.search(context):
@@ -72,7 +73,7 @@ def context_policy(context):
 def sentences(evidence):
     catalog = {}
     for index, item in enumerate(evidence, 1):
-        if context_policy(item.excerpt) or UNSAFE.search(item.excerpt):
+        if context_policy(item.excerpt) or UNSAFE.search(normalize(item.excerpt)):
             continue
         for line in item.excerpt.splitlines():
             if line.lstrip().startswith("#"):

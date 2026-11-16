@@ -2698,6 +2698,54 @@
         ]
       }
     },
+    "/api/v1/agent/tickets/{ticket_id}/workflow": {
+      "get": {
+        "tags": [
+          "Agent drafts"
+        ],
+        "summary": "Workflow Status",
+        "operationId": "workflow_status_api_v1_agent_tickets__ticket_id__workflow_get",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      }
+    },
     "/api/v1/agent/tickets/{ticket_id}/drafts": {
       "get": {
         "tags": [
@@ -2860,6 +2908,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DraftRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/tickets/{ticket_id}/drafts/{run_id}/send": {
+      "post": {
+        "tags": [
+          "Agent drafts"
+        ],
+        "summary": "Send Draft",
+        "operationId": "send_draft_api_v1_agent_tickets__ticket_id__drafts__run_id__send_post",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendDraft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftDelivery"
                 }
               }
             }
@@ -3985,6 +4101,42 @@
         ],
         "title": "CustomerTicket"
       },
+      "DecisionCode": {
+        "type": "string",
+        "enum": [
+          "AI_DRAFT_ELIGIBLE",
+          "NEEDS_AGENT",
+          "INSUFFICIENT_EVIDENCE",
+          "CLASSIFICATION_PENDING",
+          "CLASSIFICATION_UNCERTAIN",
+          "GENERATION_UNAVAILABLE"
+        ],
+        "title": "DecisionCode"
+      },
+      "DraftDelivery": {
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Ticket Id"
+          },
+          "draft_run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Draft Run Id"
+          },
+          "message": {
+            "$ref": "#/components/schemas/AgentMessage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticket_id",
+          "draft_run_id",
+          "message"
+        ],
+        "title": "DraftDelivery"
+      },
       "DraftList": {
         "properties": {
           "ticket_id": {
@@ -4169,6 +4321,23 @@
               }
             ],
             "title": "Reviewed At"
+          },
+          "send_candidate": {
+            "type": "boolean",
+            "title": "Send Candidate",
+            "default": false
+          },
+          "sent_message_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent Message Id"
           }
         },
         "type": "object",
@@ -5063,6 +5232,33 @@
         ],
         "title": "RevisionSummary"
       },
+      "SendDraft": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "confirm_public_send": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirm Public Send"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "expected_version",
+          "confirm_public_send"
+        ],
+        "title": "SendDraft"
+      },
       "SourceType": {
         "type": "string",
         "enum": [
@@ -5103,6 +5299,8 @@
           "DRAFT_EDIT",
           "DRAFT_APPROVE",
           "DRAFT_REJECT",
+          "WORKFLOW_POLICY_EVALUATED",
+          "DRAFT_SENT",
           "LEGACY_EVENT"
         ],
         "title": "TicketAction"
@@ -5252,6 +5450,87 @@
           "INTERNAL"
         ],
         "title": "Visibility"
+      },
+      "WorkflowStatus": {
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Ticket Id"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/DecisionCode"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "STANDARD",
+              "ELEVATED",
+              "UNASSESSED"
+            ],
+            "title": "Risk"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Intent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Run Id"
+          },
+          "evidence_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Count"
+          },
+          "requires_agent_review": {
+            "type": "boolean",
+            "const": true,
+            "title": "Requires Agent Review",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticket_id",
+          "decision",
+          "reason",
+          "explanation",
+          "risk",
+          "intent",
+          "classification_run_id",
+          "evidence_count"
+        ],
+        "title": "WorkflowStatus"
       }
     },
     "securitySchemes": {

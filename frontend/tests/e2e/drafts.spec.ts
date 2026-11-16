@@ -14,6 +14,29 @@ test("agent can edit and approve evidence draft without sending a reply", async 
   const firstLine = "The fictional player reports a pause in the trace.";
   const secondLine = "The sample trace records the timestamp.";
   let reviewCount = 0;
+  let sendCount = 0;
+  await page.route(
+    `http://127.0.0.1:8900/api/v1/agent/tickets/${ticketId}/workflow`,
+    async (route) => {
+      await route.fulfill({
+        headers: {
+          "Access-Control-Allow-Origin": "http://127.0.0.1:3100",
+          "Access-Control-Allow-Headers": "Authorization",
+        },
+        json: {
+          ticket_id: ticketId,
+          decision: "AI_DRAFT_ELIGIBLE",
+          reason: "ELIGIBLE",
+          explanation: "An agent can request a draft.",
+          risk: "STANDARD",
+          intent: "APP_TECHNICAL",
+          classification_run_id: uuid(8099),
+          evidence_count: 1,
+          requires_agent_review: true,
+        },
+      });
+    },
+  );
   await page.route(
     /http:\/\/127\.0\.0\.1:8900\/api\/v1\/agent\/tickets\/[^/]+\/drafts/,
     async (route) => {
@@ -59,6 +82,7 @@ test("agent can edit and approve evidence draft without sending a reply", async 
           completed_at: now,
           reviewed_at: null,
           reviewed_by: null,
+          send_candidate: false,
           evidence: [
             {
               article_id: uuid(8110),
@@ -84,11 +108,31 @@ test("agent can edit and approve evidence draft without sending a reply", async 
         return send(draft, 202);
       }
       expect(body.expected_version).toBe(draft.version);
+      if (request.url().endsWith("/send")) {
+        expect(body).toEqual({
+          request_id: expect.any(String),
+          expected_version: 3,
+          confirm_public_send: true,
+        });
+        sendCount++;
+        const id = uuid(8113);
+        draft = { ...draft, send_candidate: false, sent_message_id: id };
+        return send({
+          ticket_id: ticketId,
+          draft_run_id: draftId,
+          message: { id, visibility: "PUBLIC" },
+        });
+      }
       reviewCount += 1;
       if (body.action === "EDIT")
         draft = { ...draft, text: body.text, version: 2 };
       else if (body.action === "APPROVE")
-        draft = { ...draft, state: "APPROVED", version: 3 };
+        draft = {
+          ...draft,
+          state: "APPROVED",
+          version: 3,
+          send_candidate: true,
+        };
       return send(draft);
     },
   );
@@ -96,6 +140,7 @@ test("agent can edit and approve evidence draft without sending a reply", async 
   await page.goto(`/agent/tickets/${ticketId}`);
   const panel = page.getByRole("region", { name: "AI draft" });
   await panel.getByRole("button", { name: "Open AI drafts" }).click();
+  await expect(panel.getByText("Eligible for drafting")).toBeVisible();
   await panel
     .getByRole("button", { name: "Generate draft", exact: true })
     .press("Enter");
@@ -118,11 +163,34 @@ test("agent can edit and approve evidence draft without sending a reply", async 
     .click();
   await expect(panel.getByText("Approved for agent reference")).toBeVisible();
   expect(reviewCount).toBe(2);
+  expect(sendCount).toBe(0);
   expect(
     state.requests.filter(
       (row) => row.method === "POST" && row.path.endsWith("/messages"),
     ),
   ).toHaveLength(0);
+  await panel
+    .getByRole("button", { name: "Send public reply", exact: true })
+    .click();
+  const sendDialog = page.getByRole("alertdialog", {
+    name: "Send this approved reply to the customer?",
+  });
+  await expect(sendDialog.getByText(firstLine, { exact: false })).toBeVisible();
+  await expect(sendDialog.getByText(secondLine, { exact: false })).toHaveCount(
+    0,
+  );
+  await sendDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(sendCount).toBe(0);
+  await panel
+    .getByRole("button", { name: "Send public reply", exact: true })
+    .click();
+  await sendDialog
+    .getByRole("button", { name: "Send public reply", exact: true })
+    .click();
+  await expect(
+    panel.getByText("Public reply sent", { exact: true }),
+  ).toBeVisible();
+  expect(sendCount).toBe(1);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -148,7 +216,7 @@ test("customer ticket never loads draft content or controls", async ({
     page.getByRole("heading", { name: "Synthetic: Playback question 1" }),
   ).toBeVisible();
   await expect(page.getByRole("region", { name: "AI draft" })).toHaveCount(0);
-  expect(state.requests.some((row) => row.path.includes("/drafts"))).toBe(
-    false,
-  );
+  expect(
+    state.requests.some((row) => /\/(drafts|workflow)(\/|$)/.test(row.path)),
+  ).toBe(false);
 });

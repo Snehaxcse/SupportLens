@@ -114,6 +114,10 @@ class ClassificationService:
                 unsupported_intents=list(UNSUPPORTED), model_limitation=MODEL_LIMITATION,
                 retry_allowed=not active and (available_at is None or now >= available_at), retry_available_at=available_at)
 
+    def current(self, session, ticket_id):
+        row = session.scalar(recent_query(ticket_id).limit(1))
+        return self._view(row) if row else None
+
     def retry(self, actor, ticket_id, expected_run_id):
         try:
             with self.database.transaction() as session:

@@ -34,7 +34,28 @@ const failures: Record<string, string> = {
   DAILY_LIMIT:
     "SupportLens reached its daily generation limit. Continue with a manual reply.",
   PROVIDER_DISABLED: "Gemini drafting is disabled for this ticket.",
+  PROVIDER_NETWORK:
+    "The Gemini connection failed. Continue with a manual reply.",
+  PROVIDER_TEMPORARY:
+    "Gemini could not finish after retrying. Continue with a manual reply.",
+  PROVIDER_REJECTED:
+    "Gemini rejected the generation request. Continue with a manual reply.",
+  PROVIDER_NO_DRAFT:
+    "Gemini returned no usable draft. Continue with a manual reply.",
+  PROVIDER_INVALID:
+    "Gemini returned an invalid response. Continue with a manual reply.",
   INTERRUPTED: "Generation was interrupted. Refresh before trying again.",
+  POLICY_CHANGED:
+    "The ticket or policy changed during drafting. Review the latest conversation.",
+};
+
+const policyLabels: Record<Schemas["WorkflowStatus"]["decision"], string> = {
+  AI_DRAFT_ELIGIBLE: "Eligible for drafting",
+  NEEDS_AGENT: "Manual handling needed",
+  INSUFFICIENT_EVIDENCE: "Insufficient evidence",
+  CLASSIFICATION_PENDING: "Classification pending",
+  CLASSIFICATION_UNCERTAIN: "Classification uncertain",
+  GENERATION_UNAVAILABLE: "Generation unavailable",
 };
 
 function DraftContent({ run }: { run: Run }) {
@@ -46,7 +67,7 @@ function DraftContent({ run }: { run: Run }) {
         </Notice>
       )}
       <p role="status" className="knowledge-status">
-        {labels[run.state]}
+        {run.sent_message_id ? "Public reply sent" : labels[run.state]}
       </p>
       {run.failure && (
         <p className="field-help">
@@ -83,7 +104,15 @@ function DraftContent({ run }: { run: Run }) {
   );
 }
 
-function DraftControls({ ticketId }: { ticketId: string }) {
+function DraftControls({
+  ticketId,
+  ticketVersion,
+  onSent,
+}: {
+  ticketId: string;
+  ticketVersion: string;
+  onSent: () => void;
+}) {
   const { api, announce } = useAuth();
   const [page, setPage] = useState(1);
   const [edit, setEdit] = useState<{ id: string; text: string }>();
@@ -92,9 +121,22 @@ function DraftControls({ ticketId }: { ticketId: string }) {
     [api, ticketId, page],
   );
   const resource = useResource(`drafts:${ticketId}:${page}`, load);
+  const loadPolicy = useCallback(
+    (signal: AbortSignal) => api.workflow(ticketId, signal),
+    [api, ticketId],
+  );
+  const policy = useResource(
+    `workflow:${ticketId}:${ticketVersion}`,
+    loadPolicy,
+  );
   const mutation = useMutation();
   const activation = useRef<{ key: string; id: string } | undefined>(undefined);
   const data = resource.data;
+  const policyAllowsSend =
+    !policy.loading &&
+    !policy.error &&
+    (policy.data?.decision === "AI_DRAFT_ELIGIBLE" ||
+      policy.data?.decision === "GENERATION_UNAVAILABLE");
   const current = page === 1 ? data?.items[0] : undefined;
   const active = current?.state === "PENDING" || current?.state === "RUNNING";
   const editing = !!edit && edit.id === current?.id;
@@ -103,6 +145,16 @@ function DraftControls({ ticketId }: { ticketId: string }) {
     const timer = window.setTimeout(resource.reload, 3500);
     return () => window.clearTimeout(timer);
   }, [active, resource.loading, resource.error, resource.reload]);
+  useEffect(() => {
+    if (
+      policy.loading ||
+      policy.error ||
+      policy.data?.reason !== "CLASSIFICATION_PENDING"
+    )
+      return;
+    const timer = window.setTimeout(policy.reload, 3500);
+    return () => window.clearTimeout(timer);
+  }, [policy.loading, policy.error, policy.data?.reason, policy.reload]);
 
   function requestId(key: string) {
     if (activation.current?.key !== key)
@@ -123,6 +175,7 @@ function DraftControls({ ticketId }: { ticketId: string }) {
       setEdit(undefined);
       resource.reload();
     }
+    policy.reload();
   }
 
   async function review(action: Action, text?: string) {
@@ -150,9 +203,56 @@ function DraftControls({ ticketId }: { ticketId: string }) {
     return true;
   }
 
+  async function send() {
+    if (
+      !current ||
+      !current.send_candidate ||
+      !current.text ||
+      !policyAllowsSend ||
+      resource.loading ||
+      resource.error
+    )
+      return false;
+    const delivery = await mutation.run(() =>
+      api.sendDraft(ticketId, current.id, {
+        request_id: requestId(`send:${current.id}:${current.version}`),
+        expected_version: current.version,
+        confirm_public_send: true,
+      }),
+    );
+    if (!delivery) return false;
+    activation.current = undefined;
+    announce("Public reply sent to the conversation.");
+    resource.reload();
+    policy.reload();
+    onSent();
+    return true;
+  }
+
   const disabled = mutation.busy || resource.loading || !!resource.error;
   return (
     <>
+      {policy.loading && !policy.data && (
+        <Loading label="Checking AI eligibility…" />
+      )}
+      {policy.error && (
+        <Notice title="Could not check AI eligibility" kind="error">
+          You can still reply manually.
+        </Notice>
+      )}
+      {policy.data && !policy.error && (
+        <div>
+          <p className="knowledge-status" role="status">
+            {policyLabels[policy.data.decision]}
+          </p>
+          <p className="field-help">{policy.data.explanation}</p>
+          {policy.data.evidence_count !== null && (
+            <p className="field-help">
+              Evidence excerpts available: {policy.data.evidence_count}
+            </p>
+          )}
+        </div>
+      )}
       {resource.loading && !data && <Loading label="Loading draft history…" />}
       {resource.error && (
         <Notice title="Could not load drafts" kind="error">
@@ -167,12 +267,6 @@ function DraftControls({ ticketId }: { ticketId: string }) {
       {current && <DraftContent run={current} />}
       {data && !resource.error && !data.items.length && (
         <p className="field-help">No draft attempts yet.</p>
-      )}
-      {data && !data.generation_enabled && (
-        <p className="field-help">
-          AI drafting is unavailable for this ticket. You can still reply
-          manually.
-        </p>
       )}
       {current?.state === "DRAFT" &&
         !resource.error &&
@@ -242,21 +336,38 @@ function DraftControls({ ticketId }: { ticketId: string }) {
           </div>
         ))}
       <div className="knowledge-actions">
-        {page === 1 && data?.generation_enabled && (
-          <Button
-            variant="secondary"
-            disabled={disabled || active || editing}
-            onClick={generate}
+        {current?.send_candidate && current.text && (
+          <ConfirmAction
+            label="Send public reply"
+            title="Send this approved reply to the customer?"
+            disabled={disabled || !policyAllowsSend}
+            onConfirm={send}
           >
-            {current ? "Regenerate draft" : "Generate draft"}
-          </Button>
+            The following message will be visible to the customer.
+            <span className="knowledge-body block">{current.text}</span>
+          </ConfirmAction>
         )}
+        {page === 1 &&
+          data?.generation_enabled &&
+          policy.data?.decision === "AI_DRAFT_ELIGIBLE" &&
+          !policy.error && (
+            <Button
+              variant="secondary"
+              disabled={disabled || active || editing}
+              onClick={generate}
+            >
+              {current ? "Regenerate draft" : "Generate draft"}
+            </Button>
+          )}
         <Button
           variant="quiet"
           disabled={resource.loading || mutation.busy}
-          onClick={resource.reload}
+          onClick={() => {
+            resource.reload();
+            policy.reload();
+          }}
         >
-          Refresh drafts
+          Refresh AI workflow
         </Button>
       </div>
       {data && data.total > 1 && (
@@ -295,16 +406,21 @@ function DraftControls({ ticketId }: { ticketId: string }) {
   );
 }
 
-export function DraftPanel({ ticketId }: { ticketId: string }) {
+export function DraftPanel(props: {
+  ticketId: string;
+  ticketVersion: string;
+  onSent: () => void;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <section className="card knowledge-card" aria-labelledby="ai-draft-title">
       <h2 id="ai-draft-title">AI draft</h2>
       <p className="field-help">
-        Generate evidence-based guidance for agent review.
+        Check eligibility, review supporting evidence, and send an approved
+        reply.
       </p>
       {open ? (
-        <DraftControls key={ticketId} ticketId={ticketId} />
+        <DraftControls key={props.ticketId} {...props} />
       ) : (
         <Button variant="secondary" onClick={() => setOpen(true)}>
           Open AI drafts

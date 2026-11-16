@@ -4,9 +4,16 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 
 from ..auth.dependencies import agent_only
-from .schemas import DraftList, DraftRun, GenerateDraft, ReviewDraft
+from ..workflow.service import WorkflowStatus
+from .schemas import DraftDelivery, DraftList, DraftRun, GenerateDraft, ReviewDraft, SendDraft
 
 router = APIRouter(prefix="/api/v1/agent/tickets", tags=["Agent drafts"])
+
+
+@router.get("/{ticket_id}/workflow", response_model=WorkflowStatus)
+def workflow_status(request: Request, ticket_id: UUID, actor=Depends(agent_only)):
+    runtime = request.app.state.runtime
+    return runtime.workflow.status(actor, ticket_id, runtime.drafts)
 
 
 @router.get("/{ticket_id}/drafts", response_model=DraftList)
@@ -28,3 +35,8 @@ def generate_draft(request: Request, ticket_id: UUID, body: GenerateDraft, actor
 @router.post("/{ticket_id}/drafts/{run_id}/review", response_model=DraftRun)
 def review_draft(request: Request, ticket_id: UUID, run_id: UUID, body: ReviewDraft, actor=Depends(agent_only)):
     return request.app.state.runtime.drafts.review(actor, ticket_id, run_id, body)
+
+
+@router.post("/{ticket_id}/drafts/{run_id}/send", response_model=DraftDelivery)
+def send_draft(request: Request, ticket_id: UUID, run_id: UUID, body: SendDraft, actor=Depends(agent_only)):
+    return request.app.state.runtime.drafts.send(actor, ticket_id, run_id, body)

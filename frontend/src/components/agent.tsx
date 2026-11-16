@@ -745,7 +745,11 @@ export function AgentTicketScreen({ id }: { id: string }) {
               </section>
               <ClassificationPanel ticketId={id} />
               <TicketKnowledgePanel ticketId={id} />
-              <DraftPanel ticketId={id} />
+              <DraftPanel
+                ticketId={id}
+                ticketVersion={data.updated_at}
+                onSent={resource.reload}
+              />
               <section className="card ticket-info">
                 <h2>Customer reference</h2>
                 <p className="mono">{data.customer_id}</p>
