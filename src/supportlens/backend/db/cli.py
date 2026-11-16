@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 
 from ..config import ConfigurationError, Environment, load_settings
-from .migrations import migrate, verify_databases
+from .migrations import migrate, migrate_knowledge, verify_databases
 from .preflight import preflight
 
 
@@ -17,6 +17,8 @@ def main(argv=None):
     sub.add_parser("preflight")
     migration = sub.add_parser("migrate")
     migration.add_argument("--target", choices=["development", "test"], required=True)
+    knowledge = sub.add_parser("migrate-knowledge", help="Add M4-B to a verified existing SupportLens database")
+    knowledge.add_argument("--target", choices=["development", "test"], required=True)
     sub.add_parser("verify")
     args = parser.parse_args(argv)
     logging.getLogger("sqlalchemy.engine").setLevel(logging.ERROR)
@@ -34,6 +36,8 @@ def main(argv=None):
             result = {"status": "PASS", "databases": {key.value: value.public_report() for key, value in checked.items()}}
         elif args.command == "migrate":
             result = migrate(settings, Environment(args.target), args.root.resolve())
+        elif args.command == "migrate-knowledge":
+            result = migrate_knowledge(settings, Environment(args.target), args.root.resolve())
         else:
             result = verify_databases(settings)
         print(json.dumps(result, indent=2, sort_keys=True))

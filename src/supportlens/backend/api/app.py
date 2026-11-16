@@ -24,6 +24,11 @@ from ..classification.inference import InferenceService
 from ..classification.service import ClassificationOptions, ClassificationService
 from ..classification.worker import ClassificationWorker
 from ..classification.routes import router as classification_router
+from ..knowledge.catalog import Catalog
+from ..knowledge.embedding import LocalEmbedder
+from ..knowledge.indexing import Indexer, IndexWorker
+from ..knowledge.retrieval import RetrievalService
+from ..knowledge.routes import router as knowledge_router
 from .config import load_api_settings
 from .database import Database
 from .errors import APIError
@@ -82,19 +87,29 @@ def create_app(settings=None, *, runtime=None):
     if not hasattr(runtime, "tickets"):
         worker = getattr(runtime, "classification_worker", None)
         runtime.tickets = TicketService(runtime.database, on_created=worker.wake if worker else None)
+    embedder = LocalEmbedder(getattr(settings, "knowledge_embeddings_enabled", True))
+    synthetic = getattr(settings, "knowledge_allow_synthetic", False)
+    workers = [worker for worker in (getattr(runtime, "classification_worker", None),) if worker is not None]
+    knowledge_worker = None
+    if owned_runtime and settings.knowledge_worker_enabled and settings.firebase_project_id:
+        knowledge_worker = IndexWorker(Indexer(runtime.database, embedder, allow_synthetic=synthetic),
+                                       settings.knowledge_poll_seconds)
+        workers.append(knowledge_worker)
+    if not hasattr(runtime, "knowledge"):
+        runtime.knowledge = Catalog(runtime.database, allow_synthetic=synthetic,
+                                    wake=knowledge_worker.wake if knowledge_worker else None)
+    if not hasattr(runtime, "retrieval"):
+        runtime.retrieval = RetrievalService(runtime.database, embedder, allow_synthetic=synthetic)
 
     @asynccontextmanager
     async def lifespan(app):
         # No database or Firebase connection is required for process health.
         try:
-            worker = getattr(runtime, "classification_worker", None)
-            if worker is not None:
+            for worker in workers:
                 worker.start()
             yield
         finally:
-            worker = getattr(runtime, "classification_worker", None)
-            if worker is not None:
-                await asyncio.to_thread(worker.stop)
+            await asyncio.gather(*(asyncio.to_thread(worker.stop) for worker in workers))
             runtime.database.close()
             runtime.verifier.close()
 
@@ -161,4 +176,5 @@ def create_app(settings=None, *, runtime=None):
 
     install_ticket_routes(app)
     app.include_router(classification_router)
+    app.include_router(knowledge_router)
     return app

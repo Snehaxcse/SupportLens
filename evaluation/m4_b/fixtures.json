@@ -1,0 +1,21 @@
+{
+  "version": "synthetic-support-v1",
+  "documents": [
+    {"key": "pause", "title": "Fictional player pause", "body": "# Playback\nThe fictional audio stream stops halfway through a song. The test trace contains the music playback interruption marker."},
+    {"key": "export", "title": "Fictional library export", "body": "# Collection\nThe demo exports a local playlist inventory into a CSV file containing track titles. This is a mock library only."},
+    {"key": "display", "title": "Fictional display contrast", "body": "# Appearance\nThe test display has a dark theme with white text and a high-contrast setting for readability."},
+    {"key": "speaker", "title": "Fictional speaker pairing", "body": "# Hardware\nThe demonstration speaker connects to the mock player using Bluetooth. Observe the wireless pairing indicator."},
+    {"key": "charge", "title": "Fictional invoice record", "body": "# Test accounting\nThe mock receipt displays an invoice identifier and the currency of a fictitious charge. No money is collected."},
+    {"key": "language", "title": "Fictional language preference", "body": "# Interface\nThe sample menu supports switching the interface from English to German for the language selector test."}
+  ],
+  "queries": [
+    {"key": "explicit_playback", "text": "music playback interruption", "relevance": {"pause": 3}},
+    {"key": "paraphrase_playback", "text": "The tune cuts out before it finishes", "relevance": {"pause": 3}},
+    {"key": "explicit_export", "text": "CSV playlist export", "relevance": {"export": 3}},
+    {"key": "paraphrase_display", "text": "Readable bright letters on a black background", "relevance": {"display": 3}},
+    {"key": "related_hardware", "text": "Bluetooth wireless speaker for music playback", "relevance": {"speaker": 3, "pause": 1}},
+    {"key": "paraphrase_invoice", "text": "Where can I find the receipt number for the charge?", "relevance": {"charge": 3}},
+    {"key": "explicit_language", "text": "German language menu", "relevance": {"language": 3}},
+    {"key": "no_match", "text": "Photosynthesis in a saltwater aquarium with algae", "relevance": {}}
+  ]
+}

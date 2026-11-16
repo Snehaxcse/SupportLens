@@ -183,7 +183,9 @@ def test_live_ticket_customer_agent_lifecycle_over_local_http(ticket_http):
         extra = call("POST", "/api/v1/tickets", expected=201, json={"subject": "Synthetic direct resolution", "description": "Synthetic"})
         call("PATCH", "/api/v1/agent/tickets/"+extra["id"]+"/status", "agent", json={"status": "RESOLVED"})  # OPEN -> RESOLVED
         schema = fixture.app.openapi()
-        assert {p for p in schema["paths"] if p.startswith("/api/v1/agent")} == {
+        assert {p for p in schema["paths"] if p.startswith("/api/v1/agent")
+                and p != "/api/v1/agent/tickets/{ticket_id}/knowledge"
+                and not p.startswith("/api/v1/agent/knowledge")} == {
             "/api/v1/agent/tickets", "/api/v1/agent/tickets/{ticket_id}",
             "/api/v1/agent/tickets/{ticket_id}/claim", "/api/v1/agent/tickets/{ticket_id}/assignment",
             "/api/v1/agent/tickets/{ticket_id}/status", "/api/v1/agent/tickets/{ticket_id}/priority",

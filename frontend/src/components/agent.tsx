@@ -50,6 +50,7 @@ import {
 } from "./ticket-ui";
 import { Composer } from "./composer";
 import { ClassificationPanel } from "./classification";
+import { TicketKnowledgePanel } from "./knowledge-evidence";
 
 export function AgentDashboard() {
   const { api } = useAuth();
@@ -742,6 +743,7 @@ export function AgentTicketScreen({ id }: { id: string }) {
                 </div>
               </section>
               <ClassificationPanel ticketId={id} />
+              <TicketKnowledgePanel ticketId={id} />
               <section className="card ticket-info">
                 <h2>Customer reference</h2>
                 <p className="mono">{data.customer_id}</p>

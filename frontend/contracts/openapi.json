@@ -2166,6 +2166,537 @@
           }
         ]
       }
+    },
+    "/api/v1/agent/knowledge": {
+      "get": {
+        "tags": [
+          "Agent knowledge"
+        ],
+        "summary": "List Articles",
+        "operationId": "list_articles_api_v1_agent_knowledge_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ArticleStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "source_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SourceType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Type"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticlePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Agent knowledge"
+        ],
+        "summary": "Create Article",
+        "operationId": "create_article_api_v1_agent_knowledge_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/knowledge/retrieval-preview": {
+      "post": {
+        "tags": [
+          "Agent knowledge"
+        ],
+        "summary": "Retrieval Preview",
+        "operationId": "retrieval_preview_api_v1_agent_knowledge_retrieval_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/knowledge/{article_id}": {
+      "get": {
+        "tags": [
+          "Agent knowledge"
+        ],
+        "summary": "Article Detail",
+        "operationId": "article_detail_api_v1_agent_knowledge__article_id__get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Article Id"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Revision"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Agent knowledge"
+        ],
+        "summary": "Edit Article",
+        "operationId": "edit_article_api_v1_agent_knowledge__article_id__patch",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/knowledge/{article_id}/lifecycle": {
+      "post": {
+        "tags": [
+          "Agent knowledge"
+        ],
+        "summary": "Article Lifecycle",
+        "operationId": "article_lifecycle_api_v1_agent_knowledge__article_id__lifecycle_post",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LifecycleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/knowledge/{article_id}/revisions": {
+      "get": {
+        "tags": [
+          "Agent knowledge"
+        ],
+        "summary": "List Revisions",
+        "operationId": "list_revisions_api_v1_agent_knowledge__article_id__revisions_get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Article Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/tickets/{ticket_id}/knowledge": {
+      "get": {
+        "tags": [
+          "Agent knowledge"
+        ],
+        "summary": "Ticket Evidence",
+        "operationId": "ticket_evidence_api_v1_agent_tickets__ticket_id__knowledge_get",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          },
+          {
+            "name": "method",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Method",
+              "default": "hybrid"
+            }
+          },
+          {
+            "name": "top_k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 1,
+              "default": 5,
+              "title": "Top K"
+            }
+          },
+          {
+            "name": "source_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SourceType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseIDToken": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2434,6 +2965,362 @@
           "assigned_agent_id"
         ],
         "title": "AgentTicket"
+      },
+      "ArticleDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArticleStatus"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "revision_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Revision Id"
+          },
+          "generation": {
+            "type": "integer",
+            "title": "Generation"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "index_state": {
+            "type": "string",
+            "title": "Index State"
+          },
+          "retrieval_eligible": {
+            "type": "boolean",
+            "title": "Retrieval Eligible"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "rights_reference": {
+            "type": "string",
+            "title": "Rights Reference"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Created By"
+          },
+          "editor_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Editor Id"
+          },
+          "changed_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Changed By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "revision_created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Revision Created At"
+          },
+          "index_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Index Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "status",
+          "revision",
+          "revision_id",
+          "generation",
+          "source_name",
+          "source_type",
+          "source_url",
+          "index_state",
+          "retrieval_eligible",
+          "updated_at",
+          "body",
+          "rights_reference",
+          "created_by",
+          "editor_id",
+          "changed_by",
+          "created_at",
+          "revision_created_at",
+          "index_model"
+        ],
+        "title": "ArticleDetail"
+      },
+      "ArticleEdit": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Body"
+          },
+          "source_name": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Source Name"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "rights_reference": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Rights Reference"
+          },
+          "expected_generation": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Generation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "body",
+          "source_name",
+          "source_type",
+          "rights_reference",
+          "expected_generation"
+        ],
+        "title": "ArticleEdit"
+      },
+      "ArticleInput": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Body"
+          },
+          "source_name": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Source Name"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "rights_reference": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Rights Reference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "body",
+          "source_name",
+          "source_type",
+          "rights_reference"
+        ],
+        "title": "ArticleInput"
+      },
+      "ArticlePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ArticleSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "ArticlePage"
+      },
+      "ArticleStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "PUBLISHED",
+          "ARCHIVED"
+        ],
+        "title": "ArticleStatus"
+      },
+      "ArticleSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArticleStatus"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "revision_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Revision Id"
+          },
+          "generation": {
+            "type": "integer",
+            "title": "Generation"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "index_state": {
+            "type": "string",
+            "title": "Index State"
+          },
+          "retrieval_eligible": {
+            "type": "boolean",
+            "title": "Retrieval Eligible"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "status",
+          "revision",
+          "revision_id",
+          "generation",
+          "source_name",
+          "source_type",
+          "source_url",
+          "index_state",
+          "retrieval_eligible",
+          "updated_at"
+        ],
+        "title": "ArticleSummary"
       },
       "AssignableAgent": {
         "properties": {
@@ -2957,6 +3844,128 @@
         ],
         "title": "ErrorResponse"
       },
+      "Evidence": {
+        "properties": {
+          "article_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Article Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "revision_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Revision Id"
+          },
+          "chunk_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chunk Id"
+          },
+          "content_hash": {
+            "type": "string",
+            "title": "Content Hash"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "method": {
+            "$ref": "#/components/schemas/Method"
+          },
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "score_type": {
+            "type": "string",
+            "title": "Score Type"
+          },
+          "lexical_rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexical Rank"
+          },
+          "semantic_rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semantic Rank"
+          },
+          "embedding_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "article_id",
+          "revision",
+          "revision_id",
+          "chunk_id",
+          "content_hash",
+          "title",
+          "excerpt",
+          "source_name",
+          "source_type",
+          "source_url",
+          "method",
+          "rank",
+          "score",
+          "score_type",
+          "lexical_rank",
+          "semantic_rank",
+          "embedding_model"
+        ],
+        "title": "Evidence"
+      },
       "FailureCategory": {
         "type": "string",
         "enum": [
@@ -3000,11 +4009,49 @@
         ],
         "title": "Intent"
       },
+      "LifecycleInput": {
+        "properties": {
+          "expected_generation": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Generation"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/Operation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_generation",
+          "operation"
+        ],
+        "title": "LifecycleInput"
+      },
+      "Method": {
+        "type": "string",
+        "enum": [
+          "lexical",
+          "semantic",
+          "hybrid"
+        ],
+        "title": "Method"
+      },
       "OnboardingRequest": {
         "properties": {},
         "additionalProperties": false,
         "type": "object",
         "title": "OnboardingRequest"
+      },
+      "Operation": {
+        "type": "string",
+        "enum": [
+          "PUBLISH",
+          "UNPUBLISH",
+          "ARCHIVE",
+          "REINDEX"
+        ],
+        "title": "Operation"
       },
       "Page_AgentEvent_": {
         "properties": {
@@ -3230,6 +4277,43 @@
         ],
         "title": "Page[PublicMessage]"
       },
+      "PreviewInput": {
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/Method",
+            "default": "hybrid"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "source_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Query"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "PreviewInput"
+      },
       "Priority": {
         "type": "string",
         "enum": [
@@ -3398,6 +4482,129 @@
           "created_at"
         ],
         "title": "PublicMessage"
+      },
+      "RetrievalResult": {
+        "properties": {
+          "ticket_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Id"
+          },
+          "requested_method": {
+            "$ref": "#/components/schemas/Method"
+          },
+          "method": {
+            "$ref": "#/components/schemas/Method"
+          },
+          "semantic_state": {
+            "type": "string",
+            "title": "Semantic State"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticket_id",
+          "requested_method",
+          "method",
+          "semantic_state",
+          "items"
+        ],
+        "title": "RetrievalResult"
+      },
+      "RevisionPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RevisionSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "RevisionPage"
+      },
+      "RevisionSummary": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "revision_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Revision Id"
+          },
+          "editor_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Editor Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "revision_id",
+          "editor_id",
+          "title",
+          "source_name",
+          "created_at"
+        ],
+        "title": "RevisionSummary"
+      },
+      "SourceType": {
+        "type": "string",
+        "enum": [
+          "APPROVED_REFERENCE",
+          "INTERNAL_PROCEDURE",
+          "SYNTHETIC_TEST"
+        ],
+        "title": "SourceType"
       },
       "StatusChange": {
         "properties": {

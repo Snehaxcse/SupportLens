@@ -53,6 +53,18 @@ export function errorMessage(
       "Please wait for the classification retry cooldown or budget to reset, then refresh the suggestion.",
     classification_unavailable:
       "The ML suggestion is temporarily unavailable. You can continue working on the ticket.",
+    knowledge_changed:
+      "This article changed. Refresh it before submitting another change.",
+    knowledge_not_found:
+      "This article is unavailable. Return to the knowledge base.",
+    knowledge_revision_not_found: "This article revision is unavailable.",
+    knowledge_archived: "Archived articles are read-only.",
+    knowledge_synthetic:
+      "Synthetic publication is disabled in this environment.",
+    knowledge_index_active: "Indexing is already in progress.",
+    knowledge_transition:
+      "This action is unavailable for the current article status.",
+    knowledge_source_change: "An article cannot change its synthetic status.",
   };
   if (messages[code]) return messages[code];
   if (status === 401)
@@ -285,6 +297,63 @@ export class ApiClient {
       data.recent_runs.some((run) => !safeClassificationRun(run, id))
     )
       throw new ApiError(502, "invalid_projection");
+    return data;
+  }
+  knowledgeList(query: Query, signal?: AbortSignal) {
+    return this.request<Schemas["ArticlePage"]>(
+      "/api/v1/agent/knowledge" + queryString(query),
+      { signal },
+    );
+  }
+  article(id: string, revision?: number, signal?: AbortSignal) {
+    return this.request<Schemas["ArticleDetail"]>(
+      `/api/v1/agent/knowledge/${encodeURIComponent(id)}` +
+        queryString({ revision }),
+      { signal },
+    );
+  }
+  createArticle(body: Schemas["ArticleInput"]) {
+    return this.request<Schemas["ArticleDetail"]>("/api/v1/agent/knowledge", {
+      method: "POST",
+      body,
+    });
+  }
+  editArticle(id: string, body: Schemas["ArticleEdit"]) {
+    return this.request<Schemas["ArticleDetail"]>(
+      `/api/v1/agent/knowledge/${encodeURIComponent(id)}`,
+      { method: "PATCH", body },
+    );
+  }
+  articleLifecycle(id: string, body: Schemas["LifecycleInput"]) {
+    return this.request<Schemas["ArticleDetail"]>(
+      `/api/v1/agent/knowledge/${encodeURIComponent(id)}/lifecycle`,
+      { method: "POST", body },
+    );
+  }
+  articleRevisions(id: string, page: number, signal?: AbortSignal) {
+    return this.request<Schemas["RevisionPage"]>(
+      `/api/v1/agent/knowledge/${encodeURIComponent(id)}/revisions` +
+        queryString({ page }),
+      { signal },
+    );
+  }
+  retrievalPreview(body: Schemas["PreviewInput"]) {
+    return this.request<Schemas["RetrievalResult"]>(
+      "/api/v1/agent/knowledge/retrieval-preview",
+      { method: "POST", body },
+    );
+  }
+  async ticketKnowledge(
+    id: string,
+    method: Schemas["Method"],
+    signal?: AbortSignal,
+  ) {
+    const data = await this.request<Schemas["RetrievalResult"]>(
+      `/api/v1/agent/tickets/${encodeURIComponent(id)}/knowledge` +
+        queryString({ method }),
+      { signal },
+    );
+    if (data.ticket_id !== id) throw new ApiError(502, "invalid_projection");
     return data;
   }
   async retryClassification(

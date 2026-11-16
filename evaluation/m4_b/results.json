@@ -1,0 +1,288 @@
+{
+  "scope": "Synthetic integration and illustrative relevance only",
+  "version": "synthetic-support-v1",
+  "documents": 6,
+  "queries": 8,
+  "top_k": 3,
+  "embedding_model": "minilm-l6-v2:1110a243fdf4706b3f48f1d95db1a4f5529b4d41:avx2-single-mean-l2-v1",
+  "embedding_dimension": 384,
+  "minimum_cosine": 0.32,
+  "rrf_constant": 60,
+  "chunk_format": "heading-char-v1",
+  "source_filter_passed": true,
+  "revision_freshness_passed": true,
+  "unpublication_passed": true,
+  "methods": {
+    "lexical": {
+      "recall_at_k": 0.8571,
+      "mrr_at_k": 0.8571,
+      "ndcg_at_k": 0.8571,
+      "no_result_queries_returning_empty": 1,
+      "queries": [
+        {
+          "query": "explicit_playback",
+          "ranked": [
+            "pause"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "paraphrase_playback",
+          "ranked": [],
+          "metrics": [
+            0.0,
+            0,
+            0.0
+          ]
+        },
+        {
+          "query": "explicit_export",
+          "ranked": [
+            "export"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "paraphrase_display",
+          "ranked": [
+            "display"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "related_hardware",
+          "ranked": [
+            "speaker",
+            "pause"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "paraphrase_invoice",
+          "ranked": [
+            "charge"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "explicit_language",
+          "ranked": [
+            "language"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "no_match",
+          "ranked": [],
+          "metrics": null
+        }
+      ]
+    },
+    "semantic": {
+      "recall_at_k": 0.9286,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 0.9882,
+      "no_result_queries_returning_empty": 1,
+      "queries": [
+        {
+          "query": "explicit_playback",
+          "ranked": [
+            "pause"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "paraphrase_playback",
+          "ranked": [
+            "pause"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "explicit_export",
+          "ranked": [
+            "export"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "paraphrase_display",
+          "ranked": [
+            "display"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "related_hardware",
+          "ranked": [
+            "speaker"
+          ],
+          "metrics": [
+            0.5,
+            1.0,
+            0.9173194127129571
+          ]
+        },
+        {
+          "query": "paraphrase_invoice",
+          "ranked": [
+            "charge"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "explicit_language",
+          "ranked": [
+            "language"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "no_match",
+          "ranked": [],
+          "metrics": null
+        }
+      ]
+    },
+    "hybrid": {
+      "recall_at_k": 1.0,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0,
+      "no_result_queries_returning_empty": 1,
+      "queries": [
+        {
+          "query": "explicit_playback",
+          "ranked": [
+            "pause"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "paraphrase_playback",
+          "ranked": [
+            "pause"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "explicit_export",
+          "ranked": [
+            "export"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "paraphrase_display",
+          "ranked": [
+            "display"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "related_hardware",
+          "ranked": [
+            "speaker",
+            "pause"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "paraphrase_invoice",
+          "ranked": [
+            "charge"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "explicit_language",
+          "ranked": [
+            "language"
+          ],
+          "metrics": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "query": "no_match",
+          "ranked": [],
+          "metrics": null
+        }
+      ]
+    }
+  },
+  "fixture_sha256": "bef51ef21fa36f59bf1be244ef63dac6f439c9299effcd74a87d5bba00c1fd90"
+}

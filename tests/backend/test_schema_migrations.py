@@ -30,18 +30,18 @@ def load_revision():
 
 
 def test_exact_minimum_table_inventory():
-    assert set(Base.metadata.tables) == {"users", "tickets", "ticket_messages", "ticket_events", "ai_runs", "knowledge_articles", "knowledge_citations"}
+    assert set(migrations.foundation_metadata().tables) == {"users", "tickets", "ticket_messages", "ticket_events", "ai_runs", "knowledge_articles", "knowledge_citations"}
 
 
 def test_foreign_keys_preserve_audit_history():
-    fks = [fk for table in Base.metadata.tables.values() for fk in table.foreign_key_constraints]
+    fks = [fk for table in migrations.foundation_metadata().tables.values() for fk in table.foreign_key_constraints]
     assert len(fks) == 9
     assert all(fk.ondelete == "RESTRICT" for fk in fks)
     assert any(len(fk.column_keys) == 2 for fk in KnowledgeCitation.__table__.foreign_key_constraints)
 
 
 def test_uuid_and_utc_timestamp_defaults():
-    for table in Base.metadata.tables.values():
+    for table in migrations.foundation_metadata().tables.values():
         assert table.c.id.primary_key and isinstance(table.c.id.type, sa.Uuid)
         assert str(table.c.id.server_default.arg) == "gen_random_uuid()"
         for column in table.columns:
@@ -95,8 +95,9 @@ def test_frozen_migration_schema_matches_models_without_database():
     revision.upgrade()
     assert revision.revision == migrations.REVISION and revision.down_revision is None
     assert capture.executed == list(GUARD_DDL)
-    assert set(capture.metadata.tables) == set(Base.metadata.tables)
-    for name, actual in Base.metadata.tables.items():
+    baseline = migrations.foundation_metadata()
+    assert set(capture.metadata.tables) == set(baseline.tables)
+    for name, actual in baseline.tables.items():
         frozen = capture.metadata.tables[name]
         # Constraint declaration order has no semantic effect; retain multiplicity.
         def normalized_ddl(table):

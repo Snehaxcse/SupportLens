@@ -16,6 +16,7 @@ import {
   X,
   Plus,
   Headphones,
+  BookOpen,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { roleHome, useAuth } from "@/lib/auth";
@@ -101,6 +102,15 @@ function WorkspaceShell({
             label: isAgent ? "Ticket inbox" : "My tickets",
             icon: Inbox,
           },
+          ...(isAgent
+            ? [
+                {
+                  href: "/agent/knowledge",
+                  label: "Knowledge base",
+                  icon: BookOpen,
+                },
+              ]
+            : []),
           {
             href: base + "/account",
             label: "My account",
@@ -110,7 +120,7 @@ function WorkspaceShell({
           <Link
             key={href}
             onClick={() => setOpen(false)}
-            className={`nav-item ${path === href || (href.endsWith("/tickets") && path.startsWith(href + "/")) ? "active" : ""}`}
+            className={`nav-item ${path === href || ((href.endsWith("/tickets") || href.endsWith("/knowledge")) && path.startsWith(href + "/")) ? "active" : ""}`}
             aria-current={path === href ? "page" : undefined}
             href={href}
           >

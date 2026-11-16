@@ -6,7 +6,7 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
-from sqlalchemy import CheckConstraint, inspect, text
+from sqlalchemy import CheckConstraint, MetaData, inspect, text
 
 from ..config import ConfigurationError, Environment, Settings
 from .base import Base
@@ -18,6 +18,16 @@ from .schema_guards import EXPECTED_TRIGGERS, GUARD_DDL
 from .session import build_engine
 
 REVISION = "20261027_0001"
+KNOWLEDGE_REVISION = "20261114_0002"
+FOUNDATION_TABLES = frozenset({"users", "tickets", "ticket_messages", "ticket_events",
+                              "ai_runs", "knowledge_articles", "knowledge_citations"})
+
+
+def foundation_metadata():
+    metadata = MetaData(naming_convention=Base.metadata.naming_convention)
+    for name in sorted(FOUNDATION_TABLES):
+        Base.metadata.tables[name].to_metadata(metadata)
+    return metadata
 
 
 def include_application_object_name(name, type_, parent_names):
@@ -28,10 +38,15 @@ def include_application_object_name(name, type_, parent_names):
                 and parent_names.get("schema_name") in (None, "public"))
 
 
-def verify_schema(connection) -> dict:
+def verify_schema(connection, *, required_revision=None) -> dict:
+    from ..knowledge import models as knowledge_models  # register additive tables
+
     context = MigrationContext.configure(connection, opts={"compare_type": True, "compare_server_default": True, "version_table_schema": "public", "include_name": include_application_object_name})
-    difference_count = len(compare_metadata(context, Base.metadata))
     current_revision = context.get_current_revision()
+    if current_revision not in {REVISION, KNOWLEDGE_REVISION} or (required_revision and current_revision != required_revision):
+        raise PreflightBlocked("The expected SupportLens migration revision is not installed.")
+    metadata = Base.metadata if current_revision == KNOWLEDGE_REVISION else foundation_metadata()
+    difference_count = len(compare_metadata(context, metadata))
     trigger_rows = list(connection.execute(text("""
         SELECT t.tgname, c.relname, p.proname, t.tgtype, t.tgenabled FROM pg_trigger t
         JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -50,6 +65,21 @@ def verify_schema(connection) -> dict:
         name = re.search(r"CREATE FUNCTION public\.(\w+)", ddl)
         if name:
             expected_functions[name.group(1)] = ddl.split("AS $$", 1)[1].rsplit("$$", 1)[0].strip()
+    if current_revision == KNOWLEDGE_REVISION:
+        expected_bindings.update({
+            ("supportlens_knowledge_event_append_only", "knowledge_entry_events", "supportlens_audit_append_only", 27, "O"),
+            ("supportlens_knowledge_chunk_append_only", "knowledge_chunks", "supportlens_audit_append_only", 27, "O"),
+            ("supportlens_knowledge_embedding_append_only", "knowledge_embeddings", "supportlens_audit_append_only", 27, "O"),
+            ("supportlens_knowledge_provenance_guard", "knowledge_revisions", "supportlens_guard_knowledge_provenance", 27, "O"),
+        })
+        root = Path(__file__).resolve().parents[4]
+        revision = Config(str(root / "alembic.ini"))
+        from alembic.script import ScriptDirectory
+        migration = ScriptDirectory.from_config(revision).get_revision(KNOWLEDGE_REVISION).module
+        for ddl in migration.DDL:
+            name = re.search(r"CREATE FUNCTION public\.(\w+)", ddl)
+            if name:
+                expected_functions[name.group(1)] = ddl.split("AS $$", 1)[1].rsplit("$$", 1)[0].strip()
     actual_functions = dict((row[0], row[1]) for row in connection.execute(text("""
         SELECT p.proname, p.prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
         WHERE n.nspname='public'
@@ -59,14 +89,14 @@ def verify_schema(connection) -> dict:
     checks_match = all(
         {str(c.name) for c in table.constraints if isinstance(c, CheckConstraint)}
         == {c["name"] for c in inspector.get_check_constraints(name, schema="public")}
-        for name, table in Base.metadata.tables.items()
+        for name, table in metadata.tables.items()
     )
-    if (difference_count or current_revision != REVISION or set(map(tuple, trigger_rows)) != expected_bindings
+    if (difference_count or set(map(tuple, trigger_rows)) != expected_bindings
             or actual_functions != expected_functions or not checks_match):
         raise PreflightBlocked("Live schema, trigger inventory or migration revision differs from the approved foundation.")
     return {"revision": current_revision, "metadata_difference_count": difference_count,
             "guard_triggers_verified": len(trigger_rows), "guard_functions_verified": len(actual_functions),
-            "check_constraint_names_verified": True, "tables": sorted(Base.metadata.tables)}
+            "check_constraint_names_verified": True, "tables": sorted(metadata.tables)}
 
 
 def migrate(settings: Settings, target: Environment, project_root: Path) -> dict:
@@ -110,3 +140,28 @@ def verify_databases(settings: Settings) -> dict:
         finally:
             engine.dispose()
     return {"identities": {target.value: identity.public_report() for target, identity in identities.items()}, "schemas": reports}
+
+
+def migrate_knowledge(settings: Settings, target: Environment, project_root: Path) -> dict:
+    spec = settings.spec(target, migration=True)
+    identities = preflight(settings)
+    engine = build_engine(settings, target, migration=True)
+    try:
+        with engine.begin() as connection:
+            direct = inspect_connection(connection, spec, require_readonly=False)
+            if direct.database_oid != identities[target].database_oid:
+                raise PreflightBlocked("Direct and application database identities differ.")
+            connection.execute(text("SELECT pg_advisory_xact_lock(hashtext('supportlens_m4b_knowledge'))"))
+            before = verify_schema(connection)
+            if before["revision"] == KNOWLEDGE_REVISION:
+                return {"migration_applied": False, **before}
+            cfg = Config(str(project_root / "alembic.ini"))
+            cfg.attributes.update(verified_connection=connection, operation="m4b-knowledge-upgrade")
+            command.upgrade(cfg, KNOWLEDGE_REVISION)
+            return {"migration_applied": True, **verify_schema(connection, required_revision=KNOWLEDGE_REVISION)}
+    except ConfigurationError:
+        raise
+    except Exception:
+        raise PreflightBlocked("Knowledge migration failed and was rolled back. Driver details are suppressed.") from None
+    finally:
+        engine.dispose()

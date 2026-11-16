@@ -9,6 +9,10 @@ from ..config import ConfigurationError, Settings
 
 
 class APISettings(Settings):
+    knowledge_worker_enabled: bool = True
+    knowledge_embeddings_enabled: bool = True
+    knowledge_allow_synthetic: bool = False
+    knowledge_poll_seconds: int = Field(default=30, ge=1, le=3600)
     classification_enabled: bool = True
     classification_worker_enabled: bool = True
     classification_low_score_threshold: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
