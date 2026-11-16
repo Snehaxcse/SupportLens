@@ -2,13 +2,22 @@
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
+from uuid import UUID
 
-from pydantic import Field, ValidationError, field_validator
+from pydantic import Field, SecretStr, ValidationError, field_validator
 
 from ..config import ConfigurationError, Settings
 
 
 class APISettings(Settings):
+    gemini_api_key: SecretStr | None = Field(default=None, repr=False, exclude=True)
+    gemini_free_tier_confirmed: bool = False
+    gemini_model: str = "gemini-3.1-flash-lite"
+    gemini_daily_limit: int = Field(default=8, ge=0, le=20)
+    gemini_timeout_seconds: int = Field(default=20, ge=5, le=30)
+    gemini_synthetic_ticket_id: UUID | None = None
+    gemini_allow_reviewed_context: bool = False
+    draft_poll_seconds: int = Field(default=30, ge=1, le=3600)
     knowledge_worker_enabled: bool = True
     knowledge_embeddings_enabled: bool = True
     knowledge_allow_synthetic: bool = False
@@ -25,7 +34,8 @@ class APISettings(Settings):
     google_application_credentials: str | None = Field(default=None, repr=False)
     cors_allowed_origins: tuple[str, ...] = ()
 
-    @field_validator("firebase_project_id", "google_application_credentials", mode="before")
+    @field_validator("firebase_project_id", "google_application_credentials", "gemini_api_key",
+                     "gemini_synthetic_ticket_id", mode="before")
     @classmethod
     def empty_optional(cls, value):
         return None if value == "" else value

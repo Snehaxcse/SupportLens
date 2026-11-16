@@ -135,9 +135,11 @@ class Indexer:
 
 
 class IndexWorker:
-    def __init__(self, indexer, poll_seconds):
+    def __init__(self, indexer, poll_seconds, *, name="knowledge", delay_event="knowledge_index_delay"):
         self.indexer = indexer
         self.poll_seconds = poll_seconds
+        self.name = name
+        self.delay_event = delay_event
         self._wake = Event()
         self._stop = Event()
         self._thread = None
@@ -147,7 +149,7 @@ class IndexWorker:
 
     def start(self):
         self._stop.clear()
-        self._thread = Thread(target=self._loop, name="supportlens-knowledge", daemon=True)
+        self._thread = Thread(target=self._loop, name=f"supportlens-{self.name}", daemon=True)
         self._thread.start()
 
     def stop(self):
@@ -163,5 +165,5 @@ class IndexWorker:
                 if self.indexer.process_once():
                     continue
             except Exception:
-                logger.warning(json.dumps({"event": "knowledge_index_delay", "category": "PROCESSING_UNAVAILABLE"}))
+                logger.warning(json.dumps({"event": self.delay_event, "category": "PROCESSING_UNAVAILABLE"}))
             self._wake.wait(self.poll_seconds)

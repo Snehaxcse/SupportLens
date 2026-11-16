@@ -435,6 +435,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent/tickets/{ticket_id}/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Drafts */
+        get: operations["list_drafts_api_v1_agent_tickets__ticket_id__drafts_get"];
+        put?: never;
+        /** Generate Draft */
+        post: operations["generate_draft_api_v1_agent_tickets__ticket_id__drafts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/tickets/{ticket_id}/drafts/{run_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Draft */
+        post: operations["review_draft_api_v1_agent_tickets__ticket_id__drafts__run_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -883,6 +918,77 @@ export interface components {
             /** Resolved At */
             resolved_at: string | null;
         };
+        /** DraftList */
+        DraftList: {
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            /** Generation Enabled */
+            generation_enabled: boolean;
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Items */
+            items: components["schemas"]["DraftRun"][];
+        };
+        /** DraftRun */
+        DraftRun: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "PENDING" | "RUNNING" | "DRAFT" | "APPROVED" | "REJECTED" | "ABSTAINED" | "FAILED";
+            /** Model */
+            model: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Text */
+            text: string | null;
+            /** Evidence */
+            evidence: components["schemas"]["Evidence"][];
+            /** Synthetic */
+            synthetic: boolean;
+            /** Validation */
+            validation: string | null;
+            /** Failure */
+            failure: string | null;
+            /** Retrieval Method */
+            retrieval_method: string | null;
+            /** Provider Calls */
+            provider_calls: number;
+            /** Usage */
+            usage: {
+                [key: string]: number;
+            };
+            /** Latency Ms */
+            latency_ms: number;
+            /** Version */
+            version: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Completed At */
+            completed_at: string | null;
+            /** Reviewed By */
+            reviewed_by: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+        };
         /** EmptyRequest */
         EmptyRequest: Record<string, never>;
         /** ErrorDetail */
@@ -947,6 +1053,16 @@ export interface components {
          * @enum {string}
          */
         FailureCategory: "MODEL_MISSING" | "ARTIFACT_INVALID" | "RUNTIME_INCOMPATIBLE" | "MODEL_DISABLED" | "INVALID_INPUT" | "INFERENCE_FAILED" | "UNSUPPORTED_OUTPUT" | "RECOVERY_EXHAUSTED";
+        /** GenerateDraft */
+        GenerateDraft: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Expected Run Id */
+            expected_run_id: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1137,6 +1253,23 @@ export interface components {
             /** Items */
             items: components["schemas"]["Evidence"][];
         };
+        /** ReviewDraft */
+        ReviewDraft: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Expected Version */
+            expected_version: number;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "EDIT" | "APPROVE" | "REJECT";
+            /** Text */
+            text?: string | null;
+        };
         /** RevisionPage */
         RevisionPage: {
             /** Items */
@@ -1185,7 +1318,7 @@ export interface components {
          * TicketAction
          * @enum {string}
          */
-        TicketAction: "TICKET_CREATED" | "CUSTOMER_REPLY" | "AGENT_REPLY" | "INTERNAL_NOTE" | "ASSIGNMENT_CHANGED" | "STATUS_CHANGED" | "REOPENED" | "PRIORITY_CHANGED" | "CLASSIFICATION_REQUESTED" | "CLASSIFICATION_COMPLETED" | "LEGACY_EVENT";
+        TicketAction: "TICKET_CREATED" | "CUSTOMER_REPLY" | "AGENT_REPLY" | "INTERNAL_NOTE" | "ASSIGNMENT_CHANGED" | "STATUS_CHANGED" | "REOPENED" | "PRIORITY_CHANGED" | "CLASSIFICATION_REQUESTED" | "CLASSIFICATION_COMPLETED" | "DRAFT_REQUESTED" | "DRAFT_COMPLETED" | "DRAFT_EDIT" | "DRAFT_APPROVE" | "DRAFT_REJECT" | "LEGACY_EVENT";
         /** TicketCreate */
         TicketCreate: {
             /** Subject */
@@ -3049,6 +3182,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RetrievalResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_drafts_api_v1_agent_tickets__ticket_id__drafts_get: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_draft_api_v1_agent_tickets__ticket_id__drafts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateDraft"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftRun"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_draft_api_v1_agent_tickets__ticket_id__drafts__run_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewDraft"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftRun"];
                 };
             };
             /** @description Validation Error */

@@ -65,6 +65,14 @@ export function errorMessage(
     knowledge_transition:
       "This action is unavailable for the current article status.",
     knowledge_source_change: "An article cannot change its synthetic status.",
+    draft_active: "A draft is already in progress. Refresh the draft panel.",
+    draft_changed: "The draft changed. Refresh it before continuing.",
+    draft_disabled: "Draft generation is unavailable for this ticket.",
+    draft_rate_limited: "Wait before requesting another draft.",
+    draft_stale_evidence:
+      "The source changed. Regenerate using current evidence.",
+    draft_invalid_edit: "Keep the opening and the complete evidence lines.",
+    draft_review_limit: "Request a new draft to continue reviewing.",
   };
   if (messages[code]) return messages[code];
   if (status === 401)
@@ -296,6 +304,36 @@ export class ApiClient {
       (data.current && !safeClassificationRun(data.current, id)) ||
       data.recent_runs.some((run) => !safeClassificationRun(run, id))
     )
+      throw new ApiError(502, "invalid_projection");
+    return data;
+  }
+  async drafts(id: string, page: number, signal?: AbortSignal) {
+    const data = await this.request<Schemas["DraftList"]>(
+      `/api/v1/agent/tickets/${encodeURIComponent(id)}/drafts` +
+        queryString({ page }),
+      { signal },
+    );
+    if (
+      data.ticket_id !== id ||
+      data.items.some((item) => item.ticket_id !== id)
+    )
+      throw new ApiError(502, "invalid_projection");
+    return data;
+  }
+  async generateDraft(id: string, body: Schemas["GenerateDraft"]) {
+    const data = await this.request<Schemas["DraftRun"]>(
+      `/api/v1/agent/tickets/${encodeURIComponent(id)}/drafts`,
+      { method: "POST", body },
+    );
+    if (data.ticket_id !== id) throw new ApiError(502, "invalid_projection");
+    return data;
+  }
+  async reviewDraft(id: string, runId: string, body: Schemas["ReviewDraft"]) {
+    const data = await this.request<Schemas["DraftRun"]>(
+      `/api/v1/agent/tickets/${encodeURIComponent(id)}/drafts/${encodeURIComponent(runId)}/review`,
+      { method: "POST", body },
+    );
+    if (data.ticket_id !== id || data.id !== runId)
       throw new ApiError(502, "invalid_projection");
     return data;
   }

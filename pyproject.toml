@@ -18,6 +18,7 @@ dependencies = [
 dev = ["pytest==8.4.2", "httpx==0.28.1"]
 retrieval = ["onnxruntime==1.23.2", "tokenizers==0.22.1"]
 backend = [
+  "httpx==0.28.1",
   "SQLAlchemy==2.0.44",
   "alembic==1.16.5",
   "psycopg[binary]==3.2.12",

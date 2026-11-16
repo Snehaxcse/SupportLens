@@ -29,6 +29,11 @@ from ..knowledge.embedding import LocalEmbedder
 from ..knowledge.indexing import Indexer, IndexWorker
 from ..knowledge.retrieval import RetrievalService
 from ..knowledge.routes import router as knowledge_router
+from ..drafts.provider import Gemini
+from ..drafts.routes import router as draft_router
+from ..drafts.service import DraftService
+from ..drafts.worker import DraftProcessor
+from ..config import Environment
 from .config import load_api_settings
 from .database import Database
 from .errors import APIError
@@ -100,6 +105,18 @@ def create_app(settings=None, *, runtime=None):
                                     wake=knowledge_worker.wake if knowledge_worker else None)
     if not hasattr(runtime, "retrieval"):
         runtime.retrieval = RetrievalService(runtime.database, embedder, allow_synthetic=synthetic)
+    if not hasattr(runtime, "drafts"):
+        provider = Gemini(settings)
+        # The opt-in PostgreSQL test process must never make real API calls.
+        if settings.environment != Environment.DEVELOPMENT:
+            provider.available = False
+        runtime.drafts = DraftService(runtime.database, provider, daily_limit=settings.gemini_daily_limit,
+                                      synthetic_ticket=settings.gemini_synthetic_ticket_id,
+                                      allow_reviewed=settings.gemini_allow_reviewed_context)
+        if owned_runtime and provider.available and settings.firebase_project_id:
+            runtime.draft_worker = IndexWorker(DraftProcessor(runtime.drafts, runtime.retrieval),
+                                               settings.draft_poll_seconds, name="draft", delay_event="draft_worker_delay")
+            workers.append(runtime.draft_worker)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -177,4 +194,5 @@ def create_app(settings=None, *, runtime=None):
     install_ticket_routes(app)
     app.include_router(classification_router)
     app.include_router(knowledge_router)
+    app.include_router(draft_router)
     return app
