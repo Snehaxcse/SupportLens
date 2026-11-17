@@ -8,6 +8,7 @@ import {
   Waypoints,
 } from "lucide-react";
 import { Brand, ButtonLink, TextLink } from "@/components/ui";
+import { syntheticDemo } from "@/lib/release";
 
 export default function Landing() {
   return (
@@ -39,8 +40,9 @@ export default function Landing() {
               place for your Spotify questions, conversations, and next steps.
             </p>
             <div className="hero-actions">
-              <ButtonLink href="/sign-up">
-                Get support <ArrowRight size={18} aria-hidden="true" />
+              <ButtonLink href={syntheticDemo ? "/sign-in" : "/sign-up"}>
+                {syntheticDemo ? "Open the demo" : "Get support"}{" "}
+                <ArrowRight size={18} aria-hidden="true" />
               </ButtonLink>
               <TextLink href="/sign-in">Track a request</TextLink>
             </div>
@@ -141,8 +143,9 @@ export default function Landing() {
             <p className="eyebrow">LET’S GET IT SORTED</p>
             <h2>Your next step starts here.</h2>
           </div>
-          <ButtonLink href="/sign-up">
-            Create your account <ArrowRight size={18} aria-hidden="true" />
+          <ButtonLink href={syntheticDemo ? "/sign-in" : "/sign-up"}>
+            {syntheticDemo ? "Sign in to the demo" : "Create your account"}{" "}
+            <ArrowRight size={18} aria-hidden="true" />
           </ButtonLink>
         </section>
       </main>

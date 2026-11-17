@@ -8,6 +8,7 @@ import firebase_admin
 from firebase_admin import auth, credentials
 
 from ..api.errors import unauthorized, unavailable
+from ..config import Environment
 
 
 @dataclass(frozen=True, repr=False)
@@ -32,7 +33,7 @@ class FirebaseVerifier:
 
     def _ensure_app(self):
         # The emulator intentionally accepts unsigned tokens. It is never valid here.
-        if "FIREBASE_AUTH_EMULATOR_HOST" in os.environ or not self.settings.firebase_project_id:
+        if "FIREBASE_AUTH_EMULATOR_HOST" in os.environ or not self.settings.auth_project_id:
             raise unavailable()
         with self._lock:
             if self._app is None:
@@ -40,8 +41,11 @@ class FirebaseVerifier:
                     source = (credentials.Certificate(self.settings.google_application_credentials)
                               if self.settings.google_application_credentials else credentials.ApplicationDefault())
                     source.get_credential()  # Detect missing ADC before claiming readiness.
+                    demo = self.settings.environment == Environment.SYNTHETIC_DEMO
+                    if demo and source.project_id != self.settings.auth_project_id:
+                        raise ValueError
                     self._app = firebase_admin.initialize_app(source, options={
-                        "projectId": self.settings.firebase_project_id, "httpTimeout": 10,
+                        "projectId": self.settings.auth_project_id, "httpTimeout": 2 if demo else 10,
                     }, name="supportlens-" + uuid.uuid4().hex)
                 except Exception:
                     raise unavailable() from None
@@ -49,6 +53,15 @@ class FirebaseVerifier:
 
     def ready(self):
         self._ensure_app()
+
+    def readiness_probe(self):
+        app = self._ensure_app()
+        if self.settings.environment == Environment.SYNTHETIC_DEMO:
+            probe_user = auth.get_user(self.settings.demo_customer_uid, app=app)
+            if probe_user.disabled or not probe_user.email_verified:
+                raise unavailable()
+        else:
+            auth.list_users(max_results=1, app=app)
 
     def verify(self, token: str) -> VerifiedIdentity:
         app = self._ensure_app()
@@ -60,7 +73,7 @@ class FirebaseVerifier:
         except Exception:
             # Network/key-fetch/IAM failures deny access without leaking SDK messages.
             raise unavailable() from None
-        project = self.settings.firebase_project_id
+        project = self.settings.auth_project_id
         uid = claims.get("uid")
         firebase_claims = claims.get("firebase", {})
         if (not isinstance(uid, str) or not uid.strip() or len(uid) > 128
@@ -76,7 +89,11 @@ class FirebaseVerifier:
         return VerifiedIdentity(uid, email, safe_profile_text(claims.get("name"), 120))
 
     def close(self):
-        with self._lock:
+        if not self._lock.acquire(timeout=0.25):
+            return
+        try:
             if self._app is not None:
                 firebase_admin.delete_app(self._app)
                 self._app = None
+        finally:
+            self._lock.release()

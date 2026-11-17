@@ -5,6 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
 
+from ..api.demo import validate_demo_input
 from ..auth.dependencies import agent_only
 from .schemas import (
     ArticleDetail, ArticleEdit, ArticleFilters, ArticleInput, ArticlePage,
@@ -21,12 +22,16 @@ def list_articles(request: Request, filters: Annotated[ArticleFilters, Query()],
 
 @router.post("/knowledge", response_model=ArticleDetail, status_code=201)
 def create_article(request: Request, payload: ArticleInput, actor=Depends(agent_only)):
+    validate_demo_input(request, "article", payload)
     return request.app.state.runtime.knowledge.create(actor, payload)
 
 
 @router.post("/knowledge/retrieval-preview", response_model=RetrievalResult)
 def retrieval_preview(request: Request, payload: PreviewInput, actor=Depends(agent_only)):
-    return request.app.state.runtime.retrieval.preview(actor, payload)
+    runtime = request.app.state.runtime
+    result = runtime.retrieval.preview(actor, payload)
+    runtime.operations.event("retrieval_" + result.semantic_state.lower())
+    return result
 
 
 @router.get("/knowledge/{article_id}", response_model=ArticleDetail)
@@ -37,6 +42,7 @@ def article_detail(request: Request, article_id: UUID, revision: Annotated[int |
 
 @router.patch("/knowledge/{article_id}", response_model=ArticleDetail)
 def edit_article(request: Request, article_id: UUID, payload: ArticleEdit, actor=Depends(agent_only)):
+    validate_demo_input(request, "article", payload)
     return request.app.state.runtime.knowledge.edit(actor, article_id, payload)
 
 
@@ -56,6 +62,9 @@ def list_revisions(request: Request, article_id: UUID,
 def ticket_evidence(request: Request, ticket_id: UUID, method: Method = Method.HYBRID,
                     top_k: Annotated[int, Query(ge=1, le=10)] = 5, source_type: SourceType | None = None,
                     actor=Depends(agent_only)):
-    return request.app.state.runtime.retrieval.for_ticket(
+    runtime = request.app.state.runtime
+    result = runtime.retrieval.for_ticket(
         actor, ticket_id, RetrievalOptions(method=method, top_k=top_k, source_type=source_type),
     )
+    runtime.operations.event("retrieval_" + result.semantic_state.lower())
+    return result

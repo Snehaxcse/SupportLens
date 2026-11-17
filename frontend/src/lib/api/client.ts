@@ -20,8 +20,13 @@ export class ApiError extends Error {
     public code: string,
     public requestId?: string,
     public mutation = false,
+    public retryAfterSeconds?: number,
   ) {
-    super(errorMessage(status, code, mutation));
+    super(
+      retryAfterSeconds
+        ? `Too many requests. Try again in ${retryAfterSeconds} seconds.`
+        : errorMessage(status, code, mutation),
+    );
     this.name = "ApiError";
   }
 }
@@ -92,6 +97,12 @@ export function errorMessage(
     cache_duplicate: "This guidance already has an active reuse approval.",
     cache_embedding_unavailable:
       "Local embeddings are unavailable. Reuse approval was not saved.",
+    demo_access_required:
+      "Sign in with your provisioned fictional demo account.",
+    demo_signup_disabled:
+      "Public registration is disabled in the synthetic demo.",
+    demo_fixture_required: "Use the fictional content from the demo guide.",
+    request_timeout: "The request took too long. Try again.",
   };
   if (messages[code]) return messages[code];
   if (status === 401)
@@ -102,6 +113,7 @@ export function errorMessage(
     return "This ticket is unavailable. Check the link or return to your ticket list.";
   if (status === 409)
     return "The ticket changed during this action. Refresh before trying again.";
+  if (status === 429) return "Too many requests. Wait before trying again.";
   if (status === 422)
     return "Check the submitted fields. Text must be within the stated limits and cannot contain unsafe control characters.";
   if (mutation && (status === 0 || status >= 500))
@@ -165,6 +177,10 @@ export class ApiClient {
     const user = this.identity();
     if (!user) throw new ApiError(401, "signed_out"); // Never send an unauthenticated operational request.
     const mutation = !!options.method && options.method !== "GET";
+    const deadline = AbortSignal.timeout(30_000);
+    const signal = options.signal
+      ? AbortSignal.any([options.signal, deadline])
+      : deadline;
     for (let attempt = 0; attempt < 2; attempt++) {
       options.signal?.throwIfAborted();
       const current = this.identity();
@@ -196,13 +212,20 @@ export class ApiClient {
           ...(options.body !== undefined
             ? { body: JSON.stringify(options.body) }
             : {}),
-          signal: options.signal,
+          signal,
           cache: "no-store",
           credentials: "omit",
           redirect: "error",
         });
       } catch (error) {
         if (options.signal?.aborted) throw error;
+        if (deadline.aborted)
+          throw new ApiError(
+            mutation ? 0 : 408,
+            mutation ? "network_error" : "request_timeout",
+            undefined,
+            mutation,
+          );
         throw new ApiError(0, "network_error", undefined, mutation);
       }
       if (!this.identity() || (user.uid && this.identity()?.uid !== user.uid))
@@ -214,6 +237,14 @@ export class ApiClient {
       try {
         data = await response.json();
       } catch {
+        options.signal?.throwIfAborted();
+        if (deadline.aborted)
+          throw new ApiError(
+            mutation ? 0 : 408,
+            mutation ? "network_error" : "request_timeout",
+            undefined,
+            mutation,
+          );
         throw new ApiError(
           response.status >= 400 ? response.status : 502,
           "invalid_response",
@@ -238,7 +269,18 @@ export class ApiClient {
             : undefined;
         if (code === "account_inactive")
           this.sessionError(new ApiError(response.status, code));
-        throw new ApiError(response.status, code, requestId, mutation);
+        const retry = response.headers.get("Retry-After");
+        const retryAfterSeconds =
+          response.status === 429 && retry && /^\d{1,4}$/.test(retry)
+            ? Math.min(3600, Math.max(1, Number(retry)))
+            : undefined;
+        throw new ApiError(
+          response.status,
+          code,
+          requestId,
+          mutation,
+          retryAfterSeconds,
+        );
       }
       return data as T;
     }

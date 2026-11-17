@@ -14,11 +14,20 @@ def verified_identity(request: Request):
     match = re.fullmatch(r"(?i:Bearer) ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)", values[0])
     if not match or len(values[0]) > 16384:
         raise unauthorized()
-    return request.app.state.runtime.verifier.verify(match.group(1))
+    runtime = request.app.state.runtime
+    identity = runtime.verifier.verify(match.group(1))
+    if runtime.demo is not None:
+        runtime.demo.authorize_identity(identity)
+    runtime.abuse.actor(request, identity.uid)
+    return identity
 
 
 def current_user(request: Request, identity=Depends(verified_identity)):
-    return request.app.state.runtime.users.current(identity.uid)
+    runtime = request.app.state.runtime
+    user = runtime.users.current(identity.uid)
+    if runtime.demo is not None:
+        runtime.demo.authorize_account(user, identity)
+    return user
 
 
 def customer_only(user=Depends(current_user)):

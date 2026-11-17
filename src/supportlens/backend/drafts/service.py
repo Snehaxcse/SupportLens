@@ -102,6 +102,7 @@ class DraftService:
         self.workflow = workflow
         self.queue_limit = queue_limit
         self.cache = cache
+        self.observe = lambda event: None
 
     def in_scope(self, ticket_id):
         return ticket_id == self.synthetic_ticket or (self.allow_reviewed and self.synthetic_ticket is None)
@@ -437,12 +438,14 @@ class DraftService:
             sent = meta.get("send")
             if sent:
                 if any(sent.get(name) != value for name, value in request.items()):
+                    self.observe("draft_send_duplicate_blocked")
                     raise APIError(409, "draft_already_sent", "This draft already has a public reply.")
                 message = session.scalar(select(TicketMessage).where(TicketMessage.id == UUID(sent["message_id"]),
                     TicketMessage.ticket_id == ticket_id, TicketMessage.author_id == actor.id,
                     TicketMessage.visibility == Visibility.PUBLIC))
                 if message is None:
                     raise APIError(503, "draft_send_unavailable", "The existing reply could not be confirmed. Check the conversation.")
+                self.observe("draft_send_idempotent_replay")
                 return DraftDelivery(ticket_id=ticket_id, draft_run_id=run_id,
                                      message=repo.message_view(ticket, message, repo.actor.display_name))
             latest_id = session.scalar(order(runs(ticket_id)).with_only_columns(AIRun.id).limit(1))

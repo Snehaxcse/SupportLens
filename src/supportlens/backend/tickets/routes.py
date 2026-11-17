@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Query, Request
 
+from ..api.demo import validate_demo_input
 from ..auth.dependencies import agent_only, customer_only
 from .schemas import (
     AgentDetail, AgentDetailQuery, AgentEvent, AgentMessage, AgentMessageCreate, AgentTicket,
@@ -20,6 +21,7 @@ agent = APIRouter(prefix="/api/v1/agent", tags=["Agent tickets"], responses=erro
 @customer.post("", response_model=CustomerTicket, status_code=201)
 def create_ticket(payload: TicketCreate, request: Request, actor=Depends(customer_only)):
     """Create the customer's OPEN/NORMAL ticket and its initial audit event atomically."""
+    validate_demo_input(request, "ticket", payload)
     return request.app.state.runtime.tickets.create(actor, payload)
 
 
@@ -35,6 +37,7 @@ def customer_detail(ticket_id: UUID, request: Request, options: Annotated[Custom
 
 @customer.post("/{ticket_id}/messages", response_model=PublicMessage, status_code=201)
 def customer_reply(ticket_id: UUID, payload: CustomerMessageCreate, request: Request, actor=Depends(customer_only)):
+    validate_demo_input(request, "message", payload)
     return request.app.state.runtime.tickets.customer_message(actor, ticket_id, payload)
 
 
@@ -75,6 +78,7 @@ def change_priority(ticket_id: UUID, payload: PriorityChange, request: Request, 
 
 @agent.post("/tickets/{ticket_id}/messages", response_model=AgentMessage, status_code=201)
 def agent_reply(ticket_id: UUID, payload: AgentMessageCreate, request: Request, actor=Depends(agent_only)):
+    validate_demo_input(request, "message", payload)
     return request.app.state.runtime.tickets.agent_message(actor, ticket_id, payload)
 
 

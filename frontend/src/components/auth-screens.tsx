@@ -6,6 +6,7 @@ import { Headphones, ArrowLeft, ShieldCheck } from "lucide-react";
 import { roleHome, useAuth } from "@/lib/auth";
 import { authErrorMessage } from "@/lib/firebase";
 import { useHydrated } from "@/lib/hooks";
+import { syntheticDemo } from "@/lib/release";
 import { Brand, Button, Loading, Notice } from "./ui";
 
 export function AuthScreen({ signup = false }: { signup?: boolean }) {
@@ -141,12 +142,14 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
                   {busy ? "Connecting…" : signup ? "Create account" : "Sign in"}
                 </Button>
               </form>
-              <p className="auth-switch">
-                {signup ? "Already have an account?" : "New to SupportLens?"}{" "}
-                <Link href={signup ? "/sign-in" : "/sign-up"}>
-                  {signup ? "Sign in" : "Create an account"}
-                </Link>
-              </p>
+              {!syntheticDemo && (
+                <p className="auth-switch">
+                  {signup ? "Already have an account?" : "New to SupportLens?"}{" "}
+                  <Link href={signup ? "/sign-in" : "/sign-up"}>
+                    {signup ? "Sign in" : "Create an account"}
+                  </Link>
+                </p>
+              )}
             </>
           )}
           <p className="auth-security">

@@ -18,6 +18,11 @@ class ClassificationWorker:
         self._stopping = threading.Event()
         self._thread = None
         self._start_lock = threading.Lock()
+        self.observe = lambda event: None
+
+    @property
+    def running(self):
+        return bool(self._thread and self._thread.is_alive() and not self._stopping.is_set())
 
     def process_once(self, *, ticket_id=None):
         job = self.store.claim_next(ticket_id=ticket_id)
@@ -27,7 +32,12 @@ class ClassificationWorker:
         result = (InferenceResult(status=ClassificationState.FAILED, failure_category=FailureCategory.RECOVERY_EXHAUSTED,
                                   duration_ms=0)
                   if job.recovery_exhausted else self.inference.classify(job.subject, job.description))
-        self.store.complete(job, result)
+        if self.store.complete(job, result):
+            self.observe("classification_" + result.status.value.lower())
+            if job.recovery_exhausted:
+                self.observe("classification_recovery_exhausted")
+            elif job.recovered_lease:
+                self.observe("classification_lease_recovered")
         return True
 
     def wake(self):
@@ -55,6 +65,7 @@ class ClassificationWorker:
                 if self.process_once():
                     continue
             except Exception:
+                self.observe("classification_worker_failure")
                 # Driver/model errors and ticket text must never enter logs.
                 logger.warning(json.dumps({"event": "classification_worker_retry", "category": "PROCESSING_UNAVAILABLE"}))
             self._wake.wait(self.poll_seconds)

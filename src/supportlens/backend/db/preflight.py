@@ -82,7 +82,7 @@ def client_security(connection) -> tuple[bool, str, int]:
         raise PreflightBlocked("Could not attest the client TLS/timeout configuration.") from None
 
 
-def inspect_connection(connection, spec: ConnectionSpec, *, require_readonly=True) -> DatabaseIdentity:
+def inspect_connection(connection, spec: ConnectionSpec, *, require_readonly=True, include_inventory=True) -> DatabaseIdentity:
     row = connection.execute(text(IDENTITY_SQL)).mappings().one()
     if row["database_name"] != spec.expected_database:
         raise PreflightBlocked("Queried database identity differs from the approved target.")
@@ -102,8 +102,8 @@ def inspect_connection(connection, spec: ConnectionSpec, *, require_readonly=Tru
     encrypted, mode, connect_timeout = client_security(connection)
     if not encrypted or mode != "verify-full" or connect_timeout != spec.connect_timeout:
         raise PreflightBlocked("Verified client TLS or connection timeout checks failed.")
-    tls = connection.execute(text(TLS_SQL)).mappings().one_or_none()
-    objects = tuple(tuple(row) for row in connection.execute(text(OBJECTS_SQL)))
+    tls = connection.execute(text(TLS_SQL)).mappings().one_or_none() if include_inventory else None
+    objects = tuple(tuple(row) for row in connection.execute(text(OBJECTS_SQL))) if include_inventory else ()
     return DatabaseIdentity(
         target=spec.target.value, database_name=row["database_name"], database_oid=int(row["database_oid"]),
         schema_name=row["schema_name"], server_version=row["server_version"], timezone=row["timezone"],

@@ -17,6 +17,7 @@ class ConfigurationError(ValueError):
 class Environment(StrEnum):
     DEVELOPMENT = "development"
     TEST = "test"
+    SYNTHETIC_DEMO = "synthetic_demo"
     PRODUCTION = "production"
 
 
@@ -65,22 +66,26 @@ class Settings(BaseSettings):
         hide_input_in_errors=True, frozen=True,
     )
     environment: Environment
-    database_url: SecretStr = Field(repr=False)
-    test_database_url: SecretStr = Field(repr=False)
+    database_url: SecretStr | None = Field(default=None, repr=False)
+    test_database_url: SecretStr | None = Field(default=None, repr=False)
     migration_database_url: SecretStr | None = Field(default=None, repr=False)
     test_migration_database_url: SecretStr | None = Field(default=None, repr=False)
+    demo_database_url: SecretStr | None = Field(default=None, repr=False)
+    demo_migration_database_url: SecretStr | None = Field(default=None, repr=False)
     expected_dev_database_name: str = "SupportLens_dev"
     expected_test_database_name: str = "SupportLens_test"
     db_connect_timeout_seconds: int = Field(default=10, ge=1, le=30)
     db_statement_timeout_ms: int = Field(default=10_000, ge=100, le=120_000)
     db_ssl_root_cert: str = "system"
 
-    @field_validator("migration_database_url", "test_migration_database_url", mode="before")
+    @field_validator("database_url", "test_database_url", "migration_database_url",
+                     "test_migration_database_url", "demo_database_url", "demo_migration_database_url", mode="before")
     @classmethod
     def empty_optional_url(cls, value):
         return None if value == "" else value
 
-    @field_validator("database_url", "test_database_url", "migration_database_url", "test_migration_database_url")
+    @field_validator("database_url", "test_database_url", "migration_database_url",
+                     "test_migration_database_url", "demo_database_url", "demo_migration_database_url")
     @classmethod
     def validate_url(cls, value):
         if value is not None:
@@ -99,6 +104,26 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def distinct_databases(self):
+        if self.environment == Environment.SYNTHETIC_DEMO:
+            if any((self.database_url, self.test_database_url, self.migration_database_url,
+                    self.test_migration_database_url)) or self.demo_database_url is None:
+                raise ValueError("Synthetic demo requires only its dedicated database connection settings.")
+            demo = parse_database_url(self.demo_database_url)
+            if demo.database != "SupportLens_demo" or demo.username != "supportlens_demo_app":
+                raise ValueError("Synthetic demo requires the approved database and runtime role.")
+            self.check_trust((demo,))
+            if self.demo_migration_database_url:
+                direct = parse_database_url(self.demo_migration_database_url)
+                if (direct.database != demo.database or direct.username != "supportlens_demo_migrate"
+                        or direct.host != demo.host.replace("-pooler.", ".")
+                        or "-pooler." in direct.host or (direct.port or 5432) != (demo.port or 5432)):
+                    raise ValueError("Synthetic migration must use its separate owner role on the direct demo endpoint.")
+                self.check_trust((direct,))
+            return self
+        if self.demo_database_url or self.demo_migration_database_url:
+            raise ValueError("Demo credentials are only accepted in the synthetic demo environment.")
+        if not self.database_url or not self.test_database_url:
+            raise ValueError("Development and test database settings are required.")
         # Names below are an explicit allowlist from the approved project setup.
         if (self.expected_dev_database_name != "SupportLens_dev"
                 or self.expected_test_database_name != "SupportLens_test"):
@@ -117,16 +142,27 @@ class Settings(BaseSettings):
                 if (url.host != application.host.replace("-pooler.", ".")
                         or (url.port or 5432) != (application.port or 5432)):
                     raise ValueError("Direct migration endpoint does not match its application endpoint.")
-        for url in (dev, test):
+        self.check_trust((dev, test))
+        return self
+
+    def check_trust(self, urls):
+        for url in urls:
             if url.query.get("sslrootcert", self.db_ssl_root_cert) != self.db_ssl_root_cert:
                 raise ValueError("URL trust configuration conflicts with DB_SSL_ROOT_CERT.")
-        return self
 
     def spec(self, target: Environment, *, migration: bool = False, readonly: bool = False) -> ConnectionSpec:
         if not isinstance(target, Environment):
             raise ConfigurationError("An explicit typed database target is required.")
         if self.environment == Environment.PRODUCTION or target == Environment.PRODUCTION:
-            raise ConfigurationError("M2-A commands never access production databases.")
+            raise ConfigurationError("The application cannot access production databases.")
+        if Environment.SYNTHETIC_DEMO in (self.environment, target):
+            if self.environment != target:
+                raise ConfigurationError("The synthetic demo database cannot cross environment boundaries.")
+            value = self.demo_migration_database_url if migration else self.demo_database_url
+            if value is None:
+                raise ConfigurationError("The explicit demo migration role is required for migrations.")
+            return ConnectionSpec(parse_database_url(value), "SupportLens_demo", target,
+                                  self.db_connect_timeout_seconds, self.db_statement_timeout_ms, self.db_ssl_root_cert)
         if self.environment == Environment.TEST and target != Environment.TEST and not readonly:
             raise ConfigurationError("A test-selected process cannot create a development session.")
         if target == Environment.DEVELOPMENT:

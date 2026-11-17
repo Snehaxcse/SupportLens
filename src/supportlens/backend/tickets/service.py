@@ -234,14 +234,19 @@ class TicketRepository:
 
 
 class TicketService:
-    def __init__(self, database, *, on_created=None):
+    def __init__(self, database, *, on_created=None, inventory_limit=None):
         self.database = database
         self.on_created = on_created
+        self.inventory_limit = inventory_limit
 
     def run(self, principal, role, method, *args, write=False):
         with self.database.transaction(readonly=not write) as session:
             try:
                 repository = TicketRepository(session, principal, role, write=write)
+                if method == "create" and self.inventory_limit is not None:
+                    session.execute(select(func.pg_advisory_xact_lock(func.hashtext("supportlens-demo-inventory"))))
+                    if session.scalar(select(func.count()).select_from(Ticket)) >= self.inventory_limit:
+                        raise APIError(409, "demo_inventory_full", "The demo ticket capacity has been reached.")
                 result = getattr(repository, method)(*args)  # Internal fixed method names only.
                 if write:
                     session.flush()

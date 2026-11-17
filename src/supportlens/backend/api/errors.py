@@ -7,6 +7,7 @@ class APIError(Exception):
     status: int
     code: str
     message: str
+    retry_after: int | None = None
 
 
 def unauthorized():

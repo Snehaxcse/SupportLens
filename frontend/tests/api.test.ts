@@ -122,6 +122,48 @@ describe("authenticated API boundary", () => {
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+  it("uses bounded Retry-After guidance without retrying a rejected operation", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: { code: "rate_limited" } }), {
+        status: 429,
+        headers: { "Retry-After": "24" },
+      }),
+    );
+    const client = new ApiClient("http://localhost:8000", () => ({
+      getIdToken: vi.fn().mockResolvedValue("synthetic"),
+    }));
+    await expect(client.me()).rejects.toMatchObject({
+      status: 429,
+      retryAfterSeconds: 24,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it("treats a deadline on a write as an unconfirmed change without replay", async () => {
+    const timeout = new AbortController();
+    const deadline = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(timeout.signal);
+    fetchMock.mockImplementation(async () => {
+      timeout.abort(new DOMException("Deadline reached", "TimeoutError"));
+      throw timeout.signal.reason;
+    });
+    const client = new ApiClient("http://localhost:8000", () => ({
+      getIdToken: vi.fn().mockResolvedValue("synthetic"),
+    }));
+    try {
+      await expect(
+        client.request("/api/v1/tickets", { method: "POST", body: {} }),
+      ).rejects.toMatchObject({
+        status: 0,
+        mutation: true,
+        message: expect.stringContaining("may have reached the server"),
+      });
+      expect(deadline).toHaveBeenCalledWith(30_000);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      deadline.mockRestore();
+    }
+  });
   it("marks network mutation results as uncertain and never retries", async () => {
     fetchMock.mockRejectedValue(Error("private transport detail"));
     const client = new ApiClient("http://localhost:8000", () => ({

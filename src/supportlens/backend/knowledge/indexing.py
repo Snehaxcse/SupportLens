@@ -27,6 +27,7 @@ class IndexJob:
     lease: UUID
     title: str
     body: str
+    recovered_lease: bool = False
 
 
 class Indexer:
@@ -34,6 +35,7 @@ class Indexer:
         self.database = database
         self.embedder = embedder
         self.allow_synthetic = allow_synthetic
+        self.observe = lambda event: None
 
     def claim(self, *, entry_id=None):
         with self.database.transaction() as session:
@@ -70,7 +72,7 @@ class Indexer:
             revision.index_state = "RUNNING"
             revision.attempts += 1
             revision.lease_token, revision.lease_until = lease, now + timedelta(minutes=5)
-            return IndexJob(entry.id, revision.id, revision.version, entry.generation, lease, article.title, article.content)
+            return IndexJob(entry.id, revision.id, revision.version, entry.generation, lease, article.title, article.content, expired)
 
     @staticmethod
     def _locked_revision(session, entry):
@@ -129,8 +131,10 @@ class Indexer:
         job = self.claim()
         if job is None:
             return False
-        if job is not True:
-            self.complete(job, *self.prepare(job))
+        if job is True:
+            self.observe("knowledge_recovery_exhausted")
+        elif self.complete(job, *self.prepare(job)) and job.recovered_lease:
+            self.observe("knowledge_lease_recovered")
         return True
 
 
@@ -143,6 +147,11 @@ class IndexWorker:
         self._wake = Event()
         self._stop = Event()
         self._thread = None
+        self.observe = lambda event: None
+
+    @property
+    def running(self):
+        return bool(self._thread and self._thread.is_alive() and not self._stop.is_set())
 
     def wake(self):
         self._wake.set()
@@ -163,7 +172,9 @@ class IndexWorker:
             self._wake.clear()
             try:
                 if self.indexer.process_once():
+                    self.observe(f"{self.name}_completed")
                     continue
             except Exception:
+                self.observe(f"{self.name}_worker_failure")
                 logger.warning(json.dumps({"event": self.delay_event, "category": "PROCESSING_UNAVAILABLE"}))
             self._wake.wait(self.poll_seconds)

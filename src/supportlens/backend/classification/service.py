@@ -40,6 +40,7 @@ class ClassificationJob:
     subject: str
     description: str
     recovery_exhausted: bool = False
+    recovered_lease: bool = False
 
 
 def classification_unavailable():
@@ -175,12 +176,13 @@ class ClassificationService:
             if type(executions) is not int or executions < 0:
                 raise classification_unavailable()
             exhausted = executions >= self.options.max_executions
+            recovered = row.status == AIRunStatus.RUNNING
             token = str(uuid4())
             row.status = AIRunStatus.RUNNING
             row.score_metadata = {**meta, "lease_token": token, "lease_expires_at": now.timestamp()+self.options.lease_seconds,
                 "execution_count": executions if exhausted else executions+1, "advisory_threshold": self.options.threshold}
             ticket = session.execute(select(Ticket.subject, Ticket.description).where(Ticket.id == row.ticket_id)).one()
-            return ClassificationJob(row.id, row.ticket_id, token, ticket.subject, ticket.description, exhausted)
+            return ClassificationJob(row.id, row.ticket_id, token, ticket.subject, ticket.description, exhausted, recovered)
         # The owning transaction commits before the caller can perform inference.
 
     def complete(self, job, outcome):

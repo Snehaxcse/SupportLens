@@ -3,6 +3,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
 
+from ..api.demo import validate_demo_input
+from ..api.errors import APIError
 from ..auth.dependencies import agent_only
 from ..workflow.service import WorkflowStatus
 from .schemas import DraftDelivery, DraftList, DraftRun, GenerateDraft, ReviewDraft, SendDraft
@@ -34,9 +36,17 @@ def generate_draft(request: Request, ticket_id: UUID, body: GenerateDraft, actor
 
 @router.post("/{ticket_id}/drafts/{run_id}/review", response_model=DraftRun)
 def review_draft(request: Request, ticket_id: UUID, run_id: UUID, body: ReviewDraft, actor=Depends(agent_only)):
+    validate_demo_input(request, "draft_review", body)
     return request.app.state.runtime.drafts.review(actor, ticket_id, run_id, body)
 
 
 @router.post("/{ticket_id}/drafts/{run_id}/send", response_model=DraftDelivery)
 def send_draft(request: Request, ticket_id: UUID, run_id: UUID, body: SendDraft, actor=Depends(agent_only)):
-    return request.app.state.runtime.drafts.send(actor, ticket_id, run_id, body)
+    runtime = request.app.state.runtime
+    try:
+        delivery = runtime.drafts.send(actor, ticket_id, run_id, body)
+    except APIError:
+        runtime.operations.event("draft_send_failed")
+        raise
+    runtime.operations.event("draft_send_confirmed")
+    return delivery

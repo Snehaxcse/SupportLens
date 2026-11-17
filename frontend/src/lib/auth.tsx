@@ -18,9 +18,10 @@ import {
   signOut as firebaseSignOut,
   type User,
 } from "@firebase/auth";
-import { ApiClient, resolveProfile, safeError } from "./api/client";
+import { ApiClient, ApiError, resolveProfile, safeError } from "./api/client";
 import type { Profile, Role } from "./api/types";
 import { authErrorMessage, firebaseAuth } from "./firebase";
+import { syntheticDemo } from "./release";
 
 export type Phase =
   "checking" | "signed-out" | "unverified" | "ready" | "error";
@@ -159,9 +160,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [api]);
   const signIn = useCallback(async (email: string, password: string) => {
+    if (
+      syntheticDemo &&
+      !email.trim().toLowerCase().endsWith("@example.invalid")
+    )
+      throw new ApiError(403, "demo_access_required");
     await signInWithEmailAndPassword(firebaseAuth(), email.trim(), password);
   }, []);
   const signUp = useCallback(async (email: string, password: string) => {
+    if (syntheticDemo) throw new ApiError(403, "demo_signup_disabled");
     const result = await createUserWithEmailAndPassword(
       firebaseAuth(),
       email.trim(),
