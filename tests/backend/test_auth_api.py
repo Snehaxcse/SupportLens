@@ -1,4 +1,5 @@
 """Offline HTTP/SDK boundary checks: no real token, credential, or socket required."""
+import asyncio
 from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -13,13 +14,14 @@ from firebase_admin import auth
 from pydantic import ValidationError
 import pytest
 
-from supportlens.backend.api.app import create_app
+from supportlens.backend.api.app import MAX_REQUEST_BODY_BYTES, create_app
 from supportlens.backend.api.config import APISettings
 from supportlens.backend.api.errors import APIError, unavailable
 from supportlens.backend.auth.dependencies import agent_only, customer_only
 from supportlens.backend.auth.firebase import FirebaseVerifier, VerifiedIdentity
 from supportlens.backend.auth.users import CurrentUser, UserService, require_active
 from supportlens.backend.domain.enums import UserRole
+from supportlens.backend.knowledge.schemas import ArticleEdit
 
 TOKEN = "synthetic.payload.signature"
 HEADERS = {"Authorization": "Bearer " + TOKEN}
@@ -159,6 +161,71 @@ def test_cors_explicit_origins_and_json_rejection(client):
     assert denied.status_code == 400 and denied.json()["error"]["code"] == "cors_rejected"
     assert "access-control-allow-origin" not in denied.headers
     assert int(denied.headers["content-length"]) == len(denied.content)
+
+
+@pytest.mark.parametrize("length,expected_reads", [
+    (str(MAX_REQUEST_BODY_BYTES + 1), 0),
+    (None, 2),
+    ("2", 2),
+])
+def test_oversized_request_rejected_before_auth_or_parsing(api_settings, runtime, caplog, length, expected_reads):
+    app = create_app(api_settings, runtime=runtime)
+    headers = [(b"content-type", b"application/json"), (b"origin", b"http://localhost:3000"),
+               (b"x-request-id", b"untrusted-request-id"), (b"authorization", HEADERS["Authorization"].encode())]
+    if length is not None:
+        headers.append((b"content-length", length.encode()))
+    scope = {"type": "http", "asgi": {"version": "3.0", "spec_version": "2.4"},
+             "scheme": "http", "path": "/api/v1/auth/onboard", "query_string": b"", "method": "POST",
+             "headers": headers, "client": ("127.0.0.1", 1234), "server": ("127.0.0.1", 80)}
+    chunks = iter((b"x" * MAX_REQUEST_BODY_BYTES, b"SYNTHETIC_PRIVATE_BODY"))
+    reads, sent = [], []
+
+    async def receive():
+        reads.append(True)
+        return {"type": "http.request", "body": next(chunks), "more_body": True}
+
+    async def send(message):
+        sent.append(message)
+
+    with caplog.at_level("INFO", logger="supportlens.http"):
+        asyncio.run(app(scope, receive, send))
+    assert len(reads) == expected_reads
+    assert sent[0]["status"] == 413
+    response_headers = dict(sent[0]["headers"])
+    error = json.loads(sent[1]["body"])
+    assert error["error"]["code"] == "request_too_large"
+    assert error["request_id"] == response_headers[b"x-request-id"].decode() != "untrusted-request-id"
+    assert response_headers[b"access-control-allow-origin"] == b"http://localhost:3000"
+    assert response_headers[b"cache-control"] == b"no-store"
+    assert response_headers[b"x-content-type-options"] == b"nosniff"
+    assert "SYNTHETIC_PRIVATE_BODY" not in caplog.text + json.dumps(error)
+    runtime.verifier.verify.assert_not_called()
+    runtime.users.onboard.assert_not_called()
+
+
+def test_request_body_limit_is_inclusive(client):
+    body = b"{}" + b" " * (MAX_REQUEST_BODY_BYTES - 2)
+    response = client.post("/api/v1/auth/onboard", content=body, headers=HEADERS | {"Content-Type": "application/json"})
+    assert response.status_code == 200
+
+
+def test_request_limit_preserves_maximum_escaped_article(api_settings, runtime):
+    app = create_app(api_settings, runtime=runtime)
+
+    @app.patch("/test/article")
+    def validate_edit(payload: ArticleEdit):
+        return {"body_length": len(payload.body)}
+
+    full_url = "https://example.invalid/"
+    full_url += "\U0001f3b5" * (2048 - len(full_url))
+    payload = json.dumps({
+        "title": "\U0001f3b5" * 200, "body": "\U0001f3b5" * 100_000, "source_name": "\U0001f3b5" * 300,
+        "source_type": "APPROVED_REFERENCE", "source_url": full_url,
+        "rights_reference": "\U0001f3b5" * 500, "expected_generation": 1,
+    }, ensure_ascii=True).encode()
+    assert len(payload) > 1_200_000
+    response = TestClient(app).patch("/test/article", content=payload, headers={"Content-Type": "application/json"})
+    assert response.status_code == 200 and response.json() == {"body_length": 100_000}
 
 
 @pytest.mark.parametrize("origins", [("*",), ("http://public.example.invalid",), ("https://user:pass@example.invalid",),

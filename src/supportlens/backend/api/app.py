@@ -44,6 +44,10 @@ from .errors import APIError
 
 logger = logging.getLogger("supportlens.http")
 
+# Allows a 100,000-character knowledge article encoded as JSON surrogate pairs,
+# plus its title, provenance fields and JSON structure.
+MAX_REQUEST_BODY_BYTES = 1280 * 1024
+
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -64,6 +68,54 @@ def error_response(request, status, code, message):
     headers = {"WWW-Authenticate": "Bearer"} if status == 401 else {}
     return JSONResponse(status_code=status, content={"error": {"code": code, "message": message},
         "request_id": getattr(request.state, "request_id", "unavailable")}, headers=headers)
+
+
+class RequestBodyLimit:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope)
+        length = request.headers.get("content-length", "").lstrip("0")
+        if length.isascii() and length.isdecimal() and (
+            len(length) > len(str(MAX_REQUEST_BODY_BYTES)) or int(length) > MAX_REQUEST_BODY_BYTES
+        ):
+            await self.reject(request, receive, send)
+            return
+
+        body = bytearray()
+        while True:
+            message = await receive()
+            if message["type"] == "http.disconnect":
+                return
+            chunk = message.get("body", b"")
+            if len(body) + len(chunk) > MAX_REQUEST_BODY_BYTES:
+                await self.reject(request, receive, send)
+                return
+            body.extend(chunk)
+            if not message.get("more_body", False):
+                break
+
+        initial = {"type": "http.request", "body": bytes(body), "more_body": False}
+        body.clear()
+
+        async def replay():
+            nonlocal initial
+            if initial is not None:
+                message, initial = initial, None
+                return message
+            return await receive()
+
+        await self.app(scope, replay, send)
+
+    @staticmethod
+    async def reject(request, receive, send):
+        response = error_response(request, 413, "request_too_large", "Request body exceeds the allowed size.")
+        await response(request.scope, receive, send)
 
 
 class JSONCORSMiddleware(CORSMiddleware):
@@ -147,6 +199,7 @@ def create_app(settings=None, *, runtime=None):
     app = FastAPI(title="SupportLens", debug=False, docs_url=None, redoc_url=None,
                   openapi_url=None, lifespan=lifespan)
     app.state.runtime = runtime
+    app.add_middleware(RequestBodyLimit)
     app.add_middleware(JSONCORSMiddleware, allow_origins=list(settings.cors_allowed_origins),
         allow_credentials=False, allow_methods=["GET", "POST", "PATCH"], allow_headers=["Authorization", "Content-Type"],
         expose_headers=["X-Request-ID"], max_age=600)
